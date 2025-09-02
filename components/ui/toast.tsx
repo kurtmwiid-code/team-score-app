@@ -1,39 +1,32 @@
-import * as React from "react";
-import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "@/lib/utils";
+"use client"
 
-const toastVariants = cva(
-  "fixed bottom-4 right-4 w-full max-w-sm bg-white dark:bg-gray-900 shadow-lg rounded-lg p-4 flex items-center justify-between gap-4 border",
-  {
-    variants: {
-      variant: {
-        default: "border-gray-200 text-gray-900 dark:border-gray-700 dark:text-gray-100",
-        destructive: "border-red-500 text-red-700 dark:border-red-600 dark:text-red-400",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  }
-);
+import * as React from "react"
+import { X } from "lucide-react"
 
-export interface ToastProps extends VariantProps<typeof toastVariants> {
-  title?: string;
-  description?: string;
-  action?: React.ReactNode;
+export type ToastActionElement = React.ReactElement<any>
+
+export type ToastProps = {
+  id?: string
+  title?: string
+  description?: string
+  action?: React.ReactNode
+  onClose?: (id: string) => void
 }
 
-export function Toast({ title, description, action, variant }: ToastProps) {
+export function Toast({ id = "", title, description, action, onClose }: ToastProps) {
   return (
-    <div className={cn(toastVariants({ variant }))}>
+    <div className="bg-white border border-gray-200 shadow-lg rounded-lg p-4 flex items-start gap-3 w-80 animate-in fade-in-50 slide-in-from-bottom-2">
       <div className="flex-1">
-        {title && <div className="font-semibold">{title}</div>}
-        {description && <div className="text-sm text-gray-600 dark:text-gray-400">{description}</div>}
+        {title && <h3 className="text-sm font-semibold text-gray-900">{title}</h3>}
+        {description && <p className="text-sm text-gray-600">{description}</p>}
+        {action && <div className="mt-2">{action}</div>}
       </div>
-      {action ? <div>{action}</div> : null}
+      <button
+        onClick={() => onClose?.(id)}
+        className="text-gray-400 hover:text-gray-600 transition"
+      >
+        <X className="h-4 w-4" />
+      </button>
     </div>
-  );
+  )
 }
-
-// ✅ export this so `use-toast.ts` compiles
-export type ToastActionElement = React.ReactElement;
