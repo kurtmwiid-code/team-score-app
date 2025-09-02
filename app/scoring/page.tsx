@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast"; // ✅ import toast hook
 
 // --- Types ---
 type ScoreItem = {
@@ -98,6 +99,7 @@ const saveSubmissionToDatabase = async (submission: Submission) => {
 
 // --- Main Page ---
 export default function Page() {
+  const { toast } = useToast(); // ✅ hook
   const [scores, setScores] = useState<Record<string, ScoreItem>>(
     Object.fromEntries(
       categories.flatMap((c) =>
@@ -119,7 +121,11 @@ export default function Page() {
 
   const handleSubmit = async () => {
     if (!selectedMember || !selectedScorer || !propertyAddress || !leadType) {
-      alert("Please select Sales Rep, QC Agent, Lead Type, and enter a Property Address.");
+      toast({
+        title: "Missing Info",
+        description: "Please select Sales Rep, QC Agent, Lead Type, and enter a Property Address.",
+        variant: "destructive",
+      });
       return;
     }
     setIsSubmitting(true);
@@ -137,22 +143,36 @@ export default function Page() {
       scores,
     };
 
-    await saveSubmissionToDatabase(submission);
+    try {
+      await saveSubmissionToDatabase(submission);
 
-    // Reset form
-    setScores(
-      Object.fromEntries(
-        categories.flatMap((c) =>
-          c.questions.map((q) => [q, { section: c.name, question: q, rating: "NA", comment: "" }])
+      toast({
+        title: "Submission Successful ✅",
+        description: "Your scoring has been saved.",
+      });
+
+      // Reset form
+      setScores(
+        Object.fromEntries(
+          categories.flatMap((c) =>
+            c.questions.map((q) => [q, { section: c.name, question: q, rating: "NA", comment: "" }])
+          )
         )
-      )
-    );
-    setFinalComment("");
-    setSelectedMember("");
-    setSelectedScorer("");
-    setPropertyAddress("");
-    setLeadType("");
-    setIsSubmitting(false);
+      );
+      setFinalComment("");
+      setSelectedMember("");
+      setSelectedScorer("");
+      setPropertyAddress("");
+      setLeadType("");
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Something went wrong while saving.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -162,6 +182,7 @@ export default function Page() {
       {/* Top Form Fields */}
       <Card>
         <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-6 p-6">
+          {/* Sales Rep */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Sales Rep</label>
             <select
@@ -183,6 +204,7 @@ export default function Page() {
             </select>
           </div>
 
+          {/* QC Agent */}
           <div>
             <label className="block text-sm font-medium text-gray-700">QC Agent</label>
             <select
@@ -196,6 +218,7 @@ export default function Page() {
             </select>
           </div>
 
+          {/* Lead Type */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Lead Type</label>
             <select
@@ -209,6 +232,7 @@ export default function Page() {
             </select>
           </div>
 
+          {/* Property Address */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Property Address</label>
             <input

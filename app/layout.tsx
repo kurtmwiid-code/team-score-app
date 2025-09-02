@@ -24,7 +24,6 @@ export default function RootLayout({
           {/* Sidebar */}
           <aside className="w-64 bg-white border-r shadow-sm flex flex-col">
             <div className="flex items-center gap-3 px-6 py-4 border-b bg-gray-50">
-              {/* Logo (update path if needed) */}
               <img
                 src="/THB.webp"
                 alt="Trusted Home Buyers Logo"
@@ -41,18 +40,18 @@ export default function RootLayout({
                 Home
               </a>
               <a
-                href="/submit"
+                href="/scoring"
                 className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-[#1F3C88]/10 hover:text-[#1F3C88] transition"
               >
                 <FilePlus className="h-4 w-4" />
-                Submit Score
+                Scoring
               </a>
               <a
-                href="/analysis"
+                href="/reporting"
                 className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-[#1F3C88]/10 hover:text-[#1F3C88] transition"
               >
                 <BarChart3 className="h-4 w-4" />
-                Dashboard
+                Reporting
               </a>
               <a
                 href="/settings"
