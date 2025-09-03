@@ -55,18 +55,18 @@ export default function HomePage() {
     },
   ];
 
-  // Team members data (your actual team)
+  // Team members data (your actual team) with predefined trend values
   const teamMembers = [
-    { id: 1, name: 'Desmaine', role: 'Senior Developer', score: 92, trend: 'up', avatar: 'D' },
-    { id: 2, name: 'Jonathan', role: 'Project Manager', score: 88, trend: 'up', avatar: 'J' },
-    { id: 3, name: 'Kyle', role: 'UI/UX Designer', score: 85, trend: 'down', avatar: 'K' },
-    { id: 4, name: 'Jean', role: 'Backend Developer', score: 90, trend: 'up', avatar: 'J' },
-    { id: 5, name: 'JP', role: 'DevOps Engineer', score: 87, trend: 'up', avatar: 'JP' },
-    { id: 6, name: 'Phumla', role: 'QA Engineer', score: 89, trend: 'up', avatar: 'P' },
-    { id: 7, name: 'Michelle B', role: 'Data Analyst', score: 86, trend: 'down', avatar: 'M' },
-    { id: 8, name: 'Tiyani', role: 'Frontend Developer', score: 91, trend: 'up', avatar: 'T' },
-    { id: 9, name: 'Hadya', role: 'Business Analyst', score: 84, trend: 'up', avatar: 'H' },
-    { id: 10, name: 'Banele', role: 'Full Stack Developer', score: 93, trend: 'up', avatar: 'B' }
+    { id: 1, name: 'Desmaine', role: 'Senior Developer', score: 92, trend: 'up', avatar: 'D', trendValue: 4 },
+    { id: 2, name: 'Jonathan', role: 'Project Manager', score: 88, trend: 'up', avatar: 'J', trendValue: 2 },
+    { id: 3, name: 'Kyle', role: 'UI/UX Designer', score: 85, trend: 'down', avatar: 'K', trendValue: 1 },
+    { id: 4, name: 'Jean', role: 'Backend Developer', score: 90, trend: 'up', avatar: 'J', trendValue: 3 },
+    { id: 5, name: 'JP', role: 'DevOps Engineer', score: 87, trend: 'up', avatar: 'JP', trendValue: 2 },
+    { id: 6, name: 'Phumla', role: 'QA Engineer', score: 89, trend: 'up', avatar: 'P', trendValue: 5 },
+    { id: 7, name: 'Michelle B', role: 'Data Analyst', score: 86, trend: 'down', avatar: 'M', trendValue: 2 },
+    { id: 8, name: 'Tiyani', role: 'Frontend Developer', score: 91, trend: 'up', avatar: 'T', trendValue: 4 },
+    { id: 9, name: 'Hadya', role: 'Business Analyst', score: 84, trend: 'up', avatar: 'H', trendValue: 1 },
+    { id: 10, name: 'Banele', role: 'Full Stack Developer', score: 93, trend: 'up', avatar: 'B', trendValue: 3 }
   ];
 
   // Performance data for charts
@@ -410,7 +410,7 @@ export default function HomePage() {
                       <div className="flex items-center justify-center gap-1">
                         <div className={`w-2 h-2 rounded-full ${member.trend === 'up' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
                         <span className={`text-xs font-medium ${member.trend === 'up' ? 'text-emerald-600' : 'text-red-600'}`}>
-                          {member.trend === 'up' ? '+' : '-'}{Math.floor(Math.random() * 5) + 1}%
+                          {member.trend === 'up' ? '+' : '-'}{member.trendValue}%
                         </span>
                       </div>
                     </div>
