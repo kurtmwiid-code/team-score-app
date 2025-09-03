@@ -21,20 +21,19 @@ type Submission = {
   submissionDate: string;
   qcAgent: string;
   propertyAddress: string;
-  leadType: "Active" | "Dead";
+  leadType: string;
   finalComment: string;
   overallAverage: number;
   scores: Record<string, ScoreItem>;
 };
 
-// --- Supabase Setup ---
+// --- Supabase Setup (Fixed) ---
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_KEY;
+
 let supabase: SupabaseClient | null = null;
-if (typeof window !== "undefined" && !supabase) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_KEY;
-  if (url && key) {
-    supabase = createClient(url, key);
-  }
+if (supabaseUrl && supabaseKey) {
+  supabase = createClient(supabaseUrl, supabaseKey);
 }
 
 // --- Data Arrays ---
@@ -113,10 +112,15 @@ const categories = [
   }
 ];
 
-// --- DB Save Helper ---
+// --- DB Save Helper (Fixed) ---
 const saveSubmissionToDatabase = async (submission: Submission) => {
-  if (!supabase) return submission.id;
+  if (!supabase) {
+    console.error("Supabase not initialized");
+    throw new Error("Database connection failed");
+  }
+
   try {
+    // Insert into submissions table
     const { data: submissionData, error: submissionError } = await supabase
       .from("submissions")
       .insert([
@@ -134,35 +138,44 @@ const saveSubmissionToDatabase = async (submission: Submission) => {
       .single();
 
     if (submissionError) {
-      console.error("Supabase insert error (submissions):", submissionError.message);
-      return submission.id;
+      console.error("Submission error:", submissionError);
+      throw submissionError;
     }
 
     const submissionId = submissionData.id;
 
-    const scoresPayload = Object.values(submission.scores).map((s) => ({
-      submission_id: submissionId,
-      section: s.section,
-      question: s.question,
-      rating: s.rating,
-      comment: s.comment,
-    }));
+    // Insert scores
+    const scoresPayload = (Object.values(submission.scores) as ScoreItem[])
+      .filter((s) => s.rating !== "NA")
+      .map((s) => ({
+        submission_id: submissionId,
+        section: s.section,
+        question: s.question,
+        rating: s.rating.toString(),
+        comment: s.comment,
+      }));
 
-    const { error: scoresError } = await supabase.from("submission_scores").insert(scoresPayload);
-    if (scoresError) {
-      console.error("Supabase insert error (submission_scores):", scoresError.message);
+    if (scoresPayload.length > 0) {
+      const { error: scoresError } = await supabase
+        .from("submission_scores")
+        .insert(scoresPayload);
+      
+      if (scoresError) {
+        console.error("Scores error:", scoresError);
+        throw scoresError;
+      }
     }
 
-    return submissionId as string;
-  } catch (err: any) {
-    console.error("saveSubmissionToDatabase failed:", err);
-    return submission.id;
+    return submissionId;
+  } catch (err) {
+    console.error("Save failed:", err);
+    throw err;
   }
 };
 
 // --- Main Component ---
 export default function ScoringPage() {
-  const [scores, setScores] = useState<Record<string, ScoreItem>>(
+  const [scores, setScores] = useState(() =>
     Object.fromEntries(
       categories.flatMap((c) =>
         c.questions.map((q) => [q, { section: c.name, question: q, rating: "NA", comment: "" }])
@@ -173,7 +186,7 @@ export default function ScoringPage() {
   const [selectedRep, setSelectedRep] = useState("");
   const [selectedQC, setSelectedQC] = useState("");
   const [propertyAddress, setPropertyAddress] = useState("");
-  const [leadType, setLeadType] = useState<"Active" | "Dead" | "">("");
+  const [leadType, setLeadType] = useState("");
   const [finalComment, setFinalComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -181,7 +194,7 @@ export default function ScoringPage() {
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const handleScoreChange = (question: string, field: "rating" | "comment", value: number | string) => {
+  const handleScoreChange = (question: string, field: keyof ScoreItem, value: any) => {
     setScores((prev) => ({ ...prev, [question]: { ...prev[question], [field]: value } }));
   };
 
@@ -196,22 +209,33 @@ export default function ScoringPage() {
       return;
     }
     
+    if (!supabase) {
+      setErrorMessage("Database connection not available. Please check environment variables.");
+      setShowError(true);
+      setTimeout(() => setShowError(false), 5000);
+      return;
+    }
+    
     setIsSubmitting(true);
 
-    const validScores = Object.values(scores).filter((s) => s.rating !== "NA") as { rating: number }[];
-    const submission: Submission = {
-      id: Math.random().toString(36).substring(2),
-      salesRep: selectedRep,
-      submissionDate: new Date().toISOString().split("T")[0],
-      qcAgent: selectedQC,
-      propertyAddress,
-      leadType,
-      finalComment,
-      overallAverage: validScores.length > 0 ? validScores.reduce((acc, s) => acc + s.rating, 0) / validScores.length : 0,
-      scores,
-    };
-
     try {
+      const validScores = Object.values(scores).filter(s => s.rating !== "NA");
+      const overallAverage = validScores.length > 0 
+        ? validScores.reduce((acc, s) => acc + Number(s.rating), 0) / validScores.length 
+        : 0;
+
+      const submission: Submission = {
+        id: Math.random().toString(36).substring(2),
+        salesRep: selectedRep,
+        submissionDate: new Date().toISOString().split("T")[0],
+        qcAgent: selectedQC,
+        propertyAddress,
+        leadType,
+        finalComment,
+        overallAverage: Math.round(overallAverage * 100) / 100,
+        scores: scores as Record<string, ScoreItem>,
+      };
+
       await saveSubmissionToDatabase(submission);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 5000);
@@ -230,19 +254,20 @@ export default function ScoringPage() {
       setPropertyAddress("");
       setLeadType("");
     } catch (err) {
-      setErrorMessage("Failed to save submission. Please try again.");
+      console.error("Submission failed:", err);
+      setErrorMessage("Failed to save submission. Please try again or contact support.");
       setShowError(true);
-      setTimeout(() => setShowError(false), 5000);
+      setTimeout(() => setShowError(false), 8000);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const calculateCurrentScore = () => {
-    const validScores = Object.values(scores).filter((s) => s.rating !== "NA") as { rating: number }[];
+    const validScores = Object.values(scores).filter(s => s.rating !== "NA");
     if (validScores.length === 0) return { average: 0, percentage: 0, count: 0 };
     
-    const average = validScores.reduce((acc, s) => acc + s.rating, 0) / validScores.length;
+    const average = validScores.reduce((acc, s) => acc + Number(s.rating), 0) / validScores.length;
     const percentage = (average / 3) * 100;
     return { average: Math.round(average * 100) / 100, percentage: Math.round(percentage), count: validScores.length };
   };
@@ -347,7 +372,7 @@ export default function ScoringPage() {
                 <select
                   className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-[#1F3C88] focus:ring-2 focus:ring-[#1F3C88]/20 transition-all"
                   value={leadType}
-                  onChange={(e) => setLeadType(e.target.value as "Active" | "Dead")}
+                  onChange={(e) => setLeadType(e.target.value)}
                 >
                   <option value="">Select Lead Status</option>
                   <option value="Active">🟢 Active Lead</option>
