@@ -309,9 +309,9 @@ export default function ScoringPage() {
 
       <div className="max-w-6xl mx-auto p-6 space-y-8">
         
-        {/* Success/Error Messages */}
+        {/* Success/Error Messages - Fixed Position */}
         {showSuccess && (
-          <div className="bg-emerald-100 border border-emerald-400 text-emerald-700 px-6 py-4 rounded-xl flex items-center gap-3 shadow-lg">
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-emerald-100 border border-emerald-400 text-emerald-700 px-6 py-4 rounded-xl flex items-center gap-3 shadow-2xl max-w-md">
             <span className="text-emerald-500 text-xl">✅</span>
             <div>
               <span className="font-bold">Scoring Submitted Successfully!</span>
@@ -321,7 +321,7 @@ export default function ScoringPage() {
         )}
 
         {showError && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-xl flex items-center gap-3 shadow-lg">
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-xl flex items-center gap-3 shadow-2xl max-w-md">
             <span className="text-red-500 text-xl">❌</span>
             <div>
               <span className="font-bold">Error:</span>
