@@ -4,7 +4,8 @@ import React, { useState } from "react";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast"; // ✅ import toast hook
+import Link from "next/link";
+import { Home, FileText } from "lucide-react";
 
 // --- Types ---
 type ScoreItem = {
@@ -36,23 +37,86 @@ if (typeof window !== "undefined" && !supabase) {
   }
 }
 
+// --- Data Arrays ---
+const salesReps = [
+  "Desmaine", "Jonathan", "Kyle", "Jean", "JP", 
+  "Phumla", "Michelle B", "Tiyani", "Hadya", "Banele"
+];
+
+const qcAgents = ["Jennifer", "Popi"];
+
 // --- Categories ---
 const categories = [
-  { name: "Intro", questions: ["Introduces self clearly and professionally", "States company name and purpose of call", "Confirms time availability with prospect"] },
-  { name: "Bonding & Rapport", questions: ["Used open-ended questions to get the client talking", "Finds personal connection and builds trust", "Shows genuine interest and sincerity"] },
-  { name: "Magic Problem", questions: ["Listens without interrupting", "Identifies core reason for selling. Goes down the Pain Funnel", "Summarizes and confirms understanding"] },
-  { name: "First Ask", questions: ["Asks for first desired price confidently", "Asks about timeframe", "Explains our process clearly"] },
-  { name: "Property & Condition Questions", questions: ["Collects decision maker information", "Gathered occupancy/tenant details", "Covered condition of all major systems and possible repairs"] },
-  { name: "Second Ask", questions: ["Reviews repair estimate with seller", "Frames 'walk away' amount effectively", "Prepares seller for follow up call"] },
-  { name: "Second Call - The Close", questions: ["Presents CASH and RBP offers clearly", "Uses seller motivation to position offer", "Handles objections confidently"] },
-  { name: "Overall Performance", questions: ["Maintains positive, professional tone", "Follows script while adapting naturally", "Achieves call objective - closes the deal"] },
+  { 
+    name: "Intro", 
+    questions: [
+      "Introduces self clearly and professionally", 
+      "States company name and purpose of call", 
+      "Confirms time availability with prospect"
+    ] 
+  },
+  { 
+    name: "Bonding & Rapport", 
+    questions: [
+      "Used open-ended questions to get the client talking", 
+      "Finds personal connection and builds trust", 
+      "Shows genuine interest and sincerity"
+    ] 
+  },
+  { 
+    name: "Magic Problem", 
+    questions: [
+      "Listens without interrupting", 
+      "Identifies core reason for selling. Goes down the Pain Funnel", 
+      "Summarizes and confirms understanding"
+    ] 
+  },
+  { 
+    name: "First Ask", 
+    questions: [
+      "Asks for first desired price confidently", 
+      "Asks about timeframe", 
+      "Explains our process clearly"
+    ] 
+  },
+  { 
+    name: "Property & Condition Questions", 
+    questions: [
+      "Collects decision maker information", 
+      "Gathered occupancy/tenant details", 
+      "Covered condition of all major systems and possible repairs"
+    ] 
+  },
+  { 
+    name: "Second Ask", 
+    questions: [
+      "Reviews repair estimate with seller", 
+      "Frames 'walk away' amount effectively", 
+      "Prepares seller for follow up call"
+    ] 
+  },
+  { 
+    name: "Second Call - The Close", 
+    questions: [
+      "Presents CASH and RBP offers clearly", 
+      "Uses seller motivation to position offer", 
+      "Handles objections confidently"
+    ] 
+  },
+  { 
+    name: "Overall Performance", 
+    questions: [
+      "Maintains positive, professional tone", 
+      "Follows script while adapting naturally", 
+      "Achieves call objective - closes the deal"
+    ] 
+  }
 ];
 
 // --- DB Save Helper ---
 const saveSubmissionToDatabase = async (submission: Submission) => {
   if (!supabase) return submission.id;
   try {
-    // Insert into submissions table
     const { data: submissionData, error: submissionError } = await supabase
       .from("submissions")
       .insert([
@@ -76,7 +140,6 @@ const saveSubmissionToDatabase = async (submission: Submission) => {
 
     const submissionId = submissionData.id;
 
-    // Insert into submission_scores table
     const scoresPayload = Object.values(submission.scores).map((s) => ({
       submission_id: submissionId,
       section: s.section,
@@ -97,9 +160,8 @@ const saveSubmissionToDatabase = async (submission: Submission) => {
   }
 };
 
-// --- Main Page ---
-export default function Page() {
-  const { toast } = useToast(); // ✅ hook
+// --- Main Component ---
+export default function ScoringPage() {
   const [scores, setScores] = useState<Record<string, ScoreItem>>(
     Object.fromEntries(
       categories.flatMap((c) =>
@@ -108,34 +170,40 @@ export default function Page() {
     )
   );
 
-  const [selectedMember, setSelectedMember] = useState("");
-  const [selectedScorer, setSelectedScorer] = useState("");
+  const [selectedRep, setSelectedRep] = useState("");
+  const [selectedQC, setSelectedQC] = useState("");
   const [propertyAddress, setPropertyAddress] = useState("");
   const [leadType, setLeadType] = useState<"Active" | "Dead" | "">("");
   const [finalComment, setFinalComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleScoreChange = (question: string, field: "rating" | "comment", value: number | string) => {
     setScores((prev) => ({ ...prev, [question]: { ...prev[question], [field]: value } }));
   };
 
   const handleSubmit = async () => {
-    if (!selectedMember || !selectedScorer || !propertyAddress || !leadType) {
-      toast({
-        title: "Missing Info",
-        description: "Please select Sales Rep, QC Agent, Lead Type, and enter a Property Address.",
-        variant: "destructive",
-      });
+    setShowSuccess(false);
+    setShowError(false);
+    
+    if (!selectedRep || !selectedQC || !propertyAddress || !leadType) {
+      setErrorMessage("Please fill in all required fields: Sales Rep, QC Agent, Property Address, and Lead Type.");
+      setShowError(true);
+      setTimeout(() => setShowError(false), 5000);
       return;
     }
+    
     setIsSubmitting(true);
 
     const validScores = Object.values(scores).filter((s) => s.rating !== "NA") as { rating: number }[];
     const submission: Submission = {
       id: Math.random().toString(36).substring(2),
-      salesRep: selectedMember,
+      salesRep: selectedRep,
       submissionDate: new Date().toISOString().split("T")[0],
-      qcAgent: selectedScorer,
+      qcAgent: selectedQC,
       propertyAddress,
       leadType,
       finalComment,
@@ -145,11 +213,8 @@ export default function Page() {
 
     try {
       await saveSubmissionToDatabase(submission);
-
-      toast({
-        title: "Submission Successful ✅",
-        description: "Your scoring has been saved.",
-      });
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 5000);
 
       // Reset form
       setScores(
@@ -160,150 +225,245 @@ export default function Page() {
         )
       );
       setFinalComment("");
-      setSelectedMember("");
-      setSelectedScorer("");
+      setSelectedRep("");
+      setSelectedQC("");
       setPropertyAddress("");
       setLeadType("");
     } catch (err) {
-      toast({
-        title: "Error",
-        description: "Something went wrong while saving.",
-        variant: "destructive",
-      });
+      setErrorMessage("Failed to save submission. Please try again.");
+      setShowError(true);
+      setTimeout(() => setShowError(false), 5000);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const calculateCurrentScore = () => {
+    const validScores = Object.values(scores).filter((s) => s.rating !== "NA") as { rating: number }[];
+    if (validScores.length === 0) return { average: 0, percentage: 0, count: 0 };
+    
+    const average = validScores.reduce((acc, s) => acc + s.rating, 0) / validScores.length;
+    const percentage = (average / 3) * 100;
+    return { average: Math.round(average * 100) / 100, percentage: Math.round(percentage), count: validScores.length };
+  };
+
+  const currentScore = calculateCurrentScore();
+
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-8">
-      <h1 className="text-3xl font-bold text-indigo-600">Sales Rep Scoring</h1>
-
-      {/* Top Form Fields */}
-      <Card>
-        <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-6 p-6">
-          {/* Sales Rep */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Sales Rep</label>
-            <select
-              className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              value={selectedMember}
-              onChange={(e) => setSelectedMember(e.target.value)}
-            >
-              <option value="">-- Select a Sales Rep --</option>
-              <option value="Desmaine">Desmaine</option>
-              <option value="Jonathan">Jonathan</option>
-              <option value="Kyle">Kyle</option>
-              <option value="Jean">Jean</option>
-              <option value="JP">JP</option>
-              <option value="Phumla">Phumla</option>
-              <option value="Michelle B">Michelle B</option>
-              <option value="Tiyani">Tiyani</option>
-              <option value="Hadya">Hadya</option>
-              <option value="Banele">Banele</option>
-            </select>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
+      {/* Header */}
+      <div className="bg-white/95 backdrop-blur-sm shadow-lg border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-[#1F3C88] to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                <FileText className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-slate-800">Quality Control Scoring</h1>
+                <p className="text-slate-600">Evaluate sales representative performance</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Link href="/">
+                <Button variant="outline" className="flex items-center gap-2">
+                  <Home className="w-4 h-4" />
+                  Dashboard
+                </Button>
+              </Link>
+              <Link href="/reporting">
+                <Button variant="outline" className="flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Reports
+                </Button>
+              </Link>
+            </div>
           </div>
+        </div>
+      </div>
 
-          {/* QC Agent */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">QC Agent</label>
-            <select
-              className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              value={selectedScorer}
-              onChange={(e) => setSelectedScorer(e.target.value)}
-            >
-              <option value="">-- Select a QC Agent --</option>
-              <option value="Jennifer">Jennifer</option>
-              <option value="Popi">Popi</option>
-            </select>
+      <div className="max-w-6xl mx-auto p-6 space-y-8">
+        
+        {/* Success/Error Messages */}
+        {showSuccess && (
+          <div className="bg-emerald-100 border border-emerald-400 text-emerald-700 px-6 py-4 rounded-xl flex items-center gap-3 shadow-lg">
+            <span className="text-emerald-500 text-xl">✅</span>
+            <div>
+              <span className="font-bold">Scoring Submitted Successfully!</span>
+              <p className="text-sm">The evaluation has been saved to the database.</p>
+            </div>
           </div>
+        )}
 
-          {/* Lead Type */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Lead Type</label>
-            <select
-              className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              value={leadType}
-              onChange={(e) => setLeadType(e.target.value as "Active" | "Dead")}
-            >
-              <option value="">-- Select Lead Type --</option>
-              <option value="Active">Active</option>
-              <option value="Dead">Dead</option>
-            </select>
+        {showError && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-xl flex items-center gap-3 shadow-lg">
+            <span className="text-red-500 text-xl">❌</span>
+            <div>
+              <span className="font-bold">Error:</span>
+              <p className="text-sm">{errorMessage}</p>
+            </div>
           </div>
+        )}
 
-          {/* Property Address */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Property Address</label>
-            <input
-              type="text"
-              placeholder="123 Main Street, Ocala, FL 34471"
-              className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              value={propertyAddress}
-              onChange={(e) => setPropertyAddress(e.target.value)}
-            />
-          </div>
-        </CardContent>
-      </Card>
+        {/* Scoring Setup */}
+        <Card className="shadow-xl border-slate-200">
+          <CardContent className="p-8">
+            <h2 className="text-2xl font-bold text-slate-800 mb-6">Scoring Setup</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              
+              {/* QC Agent Selection */}
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">QC Agent *</label>
+                <select
+                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-[#1F3C88] focus:ring-2 focus:ring-[#1F3C88]/20 transition-all"
+                  value={selectedQC}
+                  onChange={(e) => setSelectedQC(e.target.value)}
+                >
+                  <option value="">Select QC Agent</option>
+                  {qcAgents.map(agent => (
+                    <option key={agent} value={agent}>{agent}</option>
+                  ))}
+                </select>
+              </div>
 
-      {/* Scoring Sections */}
-      {categories.map((cat) => (
-        <Card key={cat.name} className="border border-gray-200 shadow-sm">
-          <CardContent className="p-6 space-y-4">
-            <h2 className="text-xl font-semibold text-gray-800 border-b pb-2">{cat.name}</h2>
-            {cat.questions.map((q) => {
-              const s = scores[q];
-              return (
-                <div key={q} className="space-y-2">
-                  <p className="font-medium">{q}</p>
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                    <label className="flex items-center gap-2">
-                      <input type="radio" checked={s.rating === 1} onChange={() => handleScoreChange(q, "rating", 1)} />
-                      <span>1 - Did Not Do / Poor</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input type="radio" checked={s.rating === 2} onChange={() => handleScoreChange(q, "rating", 2)} />
-                      <span>2 - Met Expectations</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input type="radio" checked={s.rating === 3} onChange={() => handleScoreChange(q, "rating", 3)} />
-                      <span>3 - Exceeded Expectations</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input type="radio" checked={s.rating === "NA"} onChange={() => handleScoreChange(q, "rating", "NA")} />
-                      <span>N/A</span>
-                    </label>
+              {/* Sales Rep Selection */}
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Sales Representative *</label>
+                <select
+                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-[#1F3C88] focus:ring-2 focus:ring-[#1F3C88]/20 transition-all"
+                  value={selectedRep}
+                  onChange={(e) => setSelectedRep(e.target.value)}
+                >
+                  <option value="">Select Sales Rep</option>
+                  {salesReps.map(rep => (
+                    <option key={rep} value={rep}>{rep}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Lead Type */}
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Lead Status *</label>
+                <select
+                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-[#1F3C88] focus:ring-2 focus:ring-[#1F3C88]/20 transition-all"
+                  value={leadType}
+                  onChange={(e) => setLeadType(e.target.value as "Active" | "Dead")}
+                >
+                  <option value="">Select Lead Status</option>
+                  <option value="Active">🟢 Active Lead</option>
+                  <option value="Dead">🔴 Dead Lead</option>
+                </select>
+              </div>
+
+              {/* Property Address */}
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Property Address *</label>
+                <input
+                  type="text"
+                  placeholder="123 Main St, City, State ZIP"
+                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-[#1F3C88] focus:ring-2 focus:ring-[#1F3C88]/20 transition-all"
+                  value={propertyAddress}
+                  onChange={(e) => setPropertyAddress(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Current Score Display */}
+            {currentScore.count > 0 && (
+              <div className="mt-6 p-4 bg-gradient-to-r from-[#1F3C88]/10 to-blue-500/10 rounded-xl border border-[#1F3C88]/20">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-700">Current Score Progress:</span>
+                  <div className="flex gap-6 text-sm">
+                    <span className="font-bold text-[#1F3C88]">Average: {currentScore.average}/3.0</span>
+                    <span className="font-bold text-emerald-600">Percentage: {currentScore.percentage}%</span>
+                    <span className="text-slate-600">Questions Scored: {currentScore.count}</span>
                   </div>
-                  <textarea
-                    className="w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2"
-                    placeholder="Comment..."
-                    value={s.comment}
-                    onChange={(e) => handleScoreChange(q, "comment", e.target.value)}
-                  />
                 </div>
-              );
-            })}
+              </div>
+            )}
           </CardContent>
         </Card>
-      ))}
 
-      {/* Final Comment */}
-      <Card>
-        <CardContent className="p-6">
-          <label className="block text-sm font-medium text-gray-700">Final Comment / Notes</label>
-          <textarea
-            className="mt-1 w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2"
-            value={finalComment}
-            onChange={(e) => setFinalComment(e.target.value)}
-          />
-        </CardContent>
-      </Card>
+        {/* Scoring Categories */}
+        {categories.map((category, index) => (
+          <Card key={category.name} className="shadow-xl border-slate-200">
+            <CardContent className="p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-8 bg-gradient-to-r from-[#1F3C88] to-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
+                  {index + 1}
+                </div>
+                <h2 className="text-2xl font-bold text-slate-800">{category.name}</h2>
+              </div>
 
-      {/* Submit */}
-      <div className="flex justify-end">
-        <Button onClick={handleSubmit} disabled={isSubmitting} className="px-6 py-2">
-          {isSubmitting ? "Submitting..." : "Submit"}
-        </Button>
+              <div className="space-y-8">
+                {category.questions.map((question) => {
+                  const score = scores[question];
+                  return (
+                    <div key={question} className="border-b border-slate-100 pb-6 last:border-b-0">
+                      <h3 className="font-semibold text-slate-700 mb-4">{question}</h3>
+                      
+                      {/* Rating Options */}
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+                        {[
+                          { value: 1, label: "1 - Poor/Not Done", color: "bg-red-100 text-red-700 border-red-300" },
+                          { value: 2, label: "2 - Met Expectations", color: "bg-yellow-100 text-yellow-700 border-yellow-300" },
+                          { value: 3, label: "3 - Exceeded Expectations", color: "bg-emerald-100 text-emerald-700 border-emerald-300" },
+                          { value: "NA", label: "N/A - Not Applicable", color: "bg-slate-100 text-slate-700 border-slate-300" }
+                        ].map((option) => (
+                          <label key={option.value} className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all hover:shadow-md ${score.rating === option.value ? option.color + ' ring-2 ring-offset-2 ring-current' : 'bg-white border-slate-300'}`}>
+                            <input
+                              type="radio"
+                              name={question}
+                              checked={score.rating === option.value}
+                              onChange={() => handleScoreChange(question, "rating", option.value)}
+                              className="sr-only"
+                            />
+                            <div className={`w-4 h-4 rounded-full border-2 ${score.rating === option.value ? 'bg-current border-current' : 'border-slate-400'}`}></div>
+                            <span className="font-medium text-sm">{option.label}</span>
+                          </label>
+                        ))}
+                      </div>
+
+                      {/* Comment Box */}
+                      <textarea
+                        className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-[#1F3C88] focus:ring-2 focus:ring-[#1F3C88]/20 transition-all resize-none"
+                        placeholder="Add specific comments about this criteria..."
+                        rows={3}
+                        value={score.comment}
+                        onChange={(e) => handleScoreChange(question, "comment", e.target.value)}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+
+        {/* Final Comments */}
+        <Card className="shadow-xl border-slate-200">
+          <CardContent className="p-8">
+            <h2 className="text-2xl font-bold text-slate-800 mb-4">Final Comments & Overall Assessment</h2>
+            <textarea
+              className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-[#1F3C88] focus:ring-2 focus:ring-[#1F3C88]/20 transition-all resize-none"
+              placeholder="Provide overall feedback, areas for improvement, strengths observed, etc..."
+              rows={5}
+              value={finalComment}
+              onChange={(e) => setFinalComment(e.target.value)}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Submit Section */}
+        <div className="flex justify-end">
+          <Button 
+            onClick={handleSubmit} 
+            disabled={isSubmitting || !selectedRep || !selectedQC || !propertyAddress || !leadType}
+            className="px-12 py-4 text-lg font-bold bg-gradient-to-r from-[#1F3C88] to-blue-600 hover:shadow-xl transition-all duration-300"
+          >
+            {isSubmitting ? "Submitting Evaluation..." : "Submit Scoring Evaluation"}
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -89,19 +89,19 @@ export default function HomePage() {
 
   const Sidebar = () => (
     <div className={`${sidebarOpen ? 'w-72' : 'w-20'} bg-gradient-to-b from-white via-slate-50 to-white border-r border-slate-200 shadow-xl h-screen fixed left-0 top-0 z-50 transition-all duration-300`}>
-      <div className="p-4">
+      <div className="p-6">
         {/* Trusted Home Buyers Header */}
         <div className="flex items-center gap-3 mb-8 pb-6 border-b border-slate-200">
-          <div className="flex items-center gap-3 w-full">
+          <div className="flex items-center gap-3">
             <img
               src="/THB.webp"
               alt="Trusted Home Buyers Logo"
-              className="h-12 w-auto object-contain flex-shrink-0"
+              className="h-12 object-contain"
             />
             {sidebarOpen && (
-              <div className="overflow-hidden">
-                <h1 className="text-xl font-bold text-[#1F3C88]">TeamScore Pro</h1>
-                <p className="text-slate-500 text-sm">Performance Management</p>
+              <div className="overflow-hidden min-w-0 flex-1">
+                <h1 className="text-lg font-bold text-[#1F3C88] leading-tight">TeamScore Pro</h1>
+                <p className="text-slate-500 text-xs leading-tight">Performance Management</p>
               </div>
             )}
           </div>
@@ -113,7 +113,7 @@ export default function HomePage() {
           </button>
         </div>
         
-        <nav className="space-y-3 px-2">
+        <nav className="space-y-3">
           {[
             { id: 'home', label: 'Home', icon: Home, href: '/', count: '5' },
             { id: 'scoring', label: 'Scoring', icon: FilePlus, href: '/scoring', count: '24' },
@@ -139,7 +139,7 @@ export default function HomePage() {
         </nav>
 
         {sidebarOpen && (
-          <div className="mt-8 mx-2 p-4 bg-gradient-to-r from-[#1F3C88]/5 to-blue-500/5 rounded-xl border border-[#1F3C88]/20">
+          <div className="mt-8 p-4 bg-gradient-to-r from-[#1F3C88]/5 to-blue-500/5 rounded-xl border border-[#1F3C88]/20">
             <h4 className="font-semibold text-[#1F3C88] mb-2">Quick Stats</h4>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between text-slate-600">
