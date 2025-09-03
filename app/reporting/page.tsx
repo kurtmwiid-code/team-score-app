@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { Home, FileText, User, TrendingUp, TrendingDown, Calendar, MapPin, Award, ArrowLeft, Filter, Search } from "lucide-react";
+import { Home, FileText, User, TrendingUp, TrendingDown, Calendar, MapPin, Award, ArrowLeft, Filter, Search, ChevronDown, ChevronUp, Eye } from "lucide-react";
 
 // --- Types ---
 type RepPerformance = {
@@ -39,7 +39,8 @@ type Submission = {
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_KEY;
 
-let supabase: any = null;
+// Fix: Properly type supabase but allow null
+let supabase: SupabaseClient | null = null;
 if (supabaseUrl && supabaseKey) {
   supabase = createClient(supabaseUrl, supabaseKey);
 }
@@ -51,12 +52,14 @@ const categories = [
 
 // --- Main Component ---
 export default function ReportingPage() {
-  const [view, setView] = useState<"overview" | "individual">("overview");
+  const [view, setView] = useState<"overview" | "individual" | "submission">("overview");
   const [selectedRep, setSelectedRep] = useState<string | null>(null);
+  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [repData, setRepData] = useState<RepPerformance[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [expandedSubmissions, setExpandedSubmissions] = useState<Set<string>>(new Set());
 
   // Load real data from Supabase
   useEffect(() => {
@@ -96,6 +99,7 @@ export default function ReportingPage() {
         categoryTotals: Record<string, { total: number; count: number }>;
       }> = {};
 
+      // Fix: Add type annotation to forEach parameter
       submissionsData?.forEach((submission: any) => {
         if (!repSummaries[submission.sales_rep]) {
           repSummaries[submission.sales_rep] = {
@@ -114,7 +118,7 @@ export default function ReportingPage() {
           repSummary.scoreCount += 1;
         }
 
-        // Process category averages
+        // Process category averages - Fix: Add type annotation to forEach parameter
         submission.submission_scores?.forEach((score: any) => {
           if (score.rating !== 'NA') {
             if (!repSummary.categoryTotals[score.section]) {
@@ -176,7 +180,7 @@ export default function ReportingPage() {
         return;
       }
 
-      // Transform the data
+      // Transform the data - Fix: Add type annotation to map parameter
       const transformedSubmissions: Submission[] = submissionsData?.map((submission: any) => ({
         id: submission.id.toString(),
         property_address: submission.property_address,
@@ -200,6 +204,21 @@ export default function ReportingPage() {
     setSelectedRep(repName);
     setView("individual");
     loadRepSubmissions(repName);
+  };
+
+  const handleSubmissionClick = (submission: Submission) => {
+    setSelectedSubmission(submission);
+    setView("submission");
+  };
+
+  const toggleSubmissionExpansion = (submissionId: string) => {
+    const newExpanded = new Set(expandedSubmissions);
+    if (newExpanded.has(submissionId)) {
+      newExpanded.delete(submissionId);
+    } else {
+      newExpanded.add(submissionId);
+    }
+    setExpandedSubmissions(newExpanded);
   };
 
   const getRadarData = (rep: RepPerformance) => {
@@ -455,7 +474,7 @@ export default function ReportingPage() {
           </Card>
         </div>
 
-        {/* Submissions History */}
+        {/* Submissions History with Expandable Details */}
         <Card className="shadow-xl border-slate-200">
           <CardContent className="p-8">
             <h2 className="text-2xl font-bold text-slate-800 mb-6">Evaluation History</h2>
@@ -466,38 +485,204 @@ export default function ReportingPage() {
             ) : (
               <div className="space-y-4">
                 {submissions.map((submission) => (
-                  <div key={submission.id} className="p-6 bg-slate-50 rounded-xl border border-slate-200">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-4">
-                        <MapPin className="w-5 h-5 text-slate-500" />
-                        <div>
-                          <h3 className="font-bold text-slate-800">{submission.property_address}</h3>
-                          <div className="flex items-center gap-4 text-sm text-slate-600">
-                            <span>QC Agent: {submission.qc_agent}</span>
-                            <span>Date: {submission.submission_date}</span>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              submission.lead_type === "Active" 
-                                ? "bg-green-100 text-green-700" 
-                                : "bg-red-100 text-red-700"
-                            }`}>
-                              {submission.lead_type} Lead
-                            </span>
+                  <div key={submission.id} className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+                    <div 
+                      className="p-6 hover:bg-slate-100 cursor-pointer transition-colors"
+                      onClick={() => toggleSubmissionExpansion(submission.id)}
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-4">
+                          <MapPin className="w-5 h-5 text-slate-500" />
+                          <div>
+                            <h3 className="font-bold text-slate-800">{submission.property_address}</h3>
+                            <div className="flex items-center gap-4 text-sm text-slate-600">
+                              <span>QC Agent: {submission.qc_agent}</span>
+                              <span>Date: {submission.submission_date}</span>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                submission.lead_type === "Active" 
+                                  ? "bg-green-100 text-green-700" 
+                                  : "bg-red-100 text-red-700"
+                              }`}>
+                                {submission.lead_type} Lead
+                              </span>
+                            </div>
                           </div>
                         </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-[#1F3C88]">{submission.overall_average.toFixed(1)}</div>
+                            <div className="text-sm text-slate-600">Score</div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSubmissionClick(submission);
+                            }}
+                            className="flex items-center gap-2 text-[#1F3C88] hover:bg-[#1F3C88]/10"
+                          >
+                            <Eye className="w-4 h-4" />
+                            Details
+                          </Button>
+                          {expandedSubmissions.has(submission.id) ? (
+                            <ChevronUp className="w-5 h-5 text-slate-400" />
+                          ) : (
+                            <ChevronDown className="w-5 h-5 text-slate-400" />
+                          )}
+                        </div>
                       </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-[#1F3C88]">{submission.overall_average.toFixed(1)}</div>
-                        <div className="text-sm text-slate-600">Score</div>
-                      </div>
+                      
+                      {submission.final_comment && (
+                        <div className="bg-white p-4 rounded-lg border">
+                          <h4 className="font-semibold text-slate-700 mb-2">Final Comments:</h4>
+                          <p className="text-slate-600">{submission.final_comment}</p>
+                        </div>
+                      )}
                     </div>
-                    {submission.final_comment && (
-                      <div className="bg-white p-4 rounded-lg border">
-                        <h4 className="font-semibold text-slate-700 mb-2">Final Comments:</h4>
-                        <p className="text-slate-600">{submission.final_comment}</p>
+
+                    {/* Expandable Detailed Scores */}
+                    {expandedSubmissions.has(submission.id) && (
+                      <div className="px-6 pb-6 bg-white border-t border-slate-200">
+                        <h4 className="font-semibold text-slate-800 mb-4">Detailed Scores:</h4>
+                        <div className="grid gap-4">
+                          {submission.scores.map((score, index) => (
+                            <div key={index} className="flex justify-between items-start p-4 bg-slate-50 rounded-lg">
+                              <div className="flex-1">
+                                <h5 className="font-medium text-slate-800 mb-1">{score.section}</h5>
+                                <p className="text-sm text-slate-600 mb-2">{score.question}</p>
+                                {score.comment && (
+                                  <p className="text-sm text-slate-500 italic">"{score.comment}"</p>
+                                )}
+                              </div>
+                              <div className="ml-4 text-center">
+                                <div className={`text-lg font-bold ${
+                                  score.rating === "NA" ? "text-slate-400" :
+                                  typeof score.rating === "number" && score.rating >= 2.5 ? "text-emerald-600" :
+                                  typeof score.rating === "number" && score.rating >= 2 ? "text-yellow-600" :
+                                  "text-red-600"
+                                }`}>
+                                  {score.rating === "NA" ? "N/A" : score.rating}
+                                </div>
+                                <div className="text-xs text-slate-500">
+                                  {score.rating !== "NA" && "out of 3"}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
+  // --- Submission Detail View ---
+  const SubmissionDetailView = () => {
+    if (!selectedSubmission) return null;
+
+    return (
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              onClick={() => setView("individual")}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to {selectedRep}
+            </Button>
+            <MapPin className="w-8 h-8 text-[#1F3C88]" />
+            <div>
+              <h1 className="text-4xl font-bold text-slate-800">{selectedSubmission.property_address}</h1>
+              <p className="text-slate-600 text-lg">Detailed Evaluation Breakdown</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Submission Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card className="shadow-lg border-slate-200">
+            <CardContent className="p-6 text-center">
+              <div className="text-3xl font-bold text-[#1F3C88] mb-1">{selectedSubmission.overall_average.toFixed(1)}</div>
+              <div className="text-slate-600">Overall Score</div>
+              <div className="text-sm text-emerald-600 font-medium">out of 3.0</div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg border-slate-200">
+            <CardContent className="p-6 text-center">
+              <div className="text-lg font-bold text-slate-800 mb-1">{selectedSubmission.qc_agent}</div>
+              <div className="text-slate-600">QC Agent</div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg border-slate-200">
+            <CardContent className="p-6 text-center">
+              <div className="text-lg font-bold text-slate-800 mb-1">{selectedSubmission.submission_date}</div>
+              <div className="text-slate-600">Evaluation Date</div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg border-slate-200">
+            <CardContent className="p-6 text-center">
+              <div className={`text-lg font-bold mb-1 ${
+                selectedSubmission.lead_type === "Active" ? "text-emerald-600" : "text-red-600"
+              }`}>
+                {selectedSubmission.lead_type}
+              </div>
+              <div className="text-slate-600">Lead Type</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Detailed Scores */}
+        <Card className="shadow-xl border-slate-200">
+          <CardContent className="p-8">
+            <h2 className="text-2xl font-bold text-slate-800 mb-6">Detailed Score Breakdown</h2>
+            <div className="grid gap-6">
+              {selectedSubmission.scores.map((score, index) => (
+                <div key={index} className="p-6 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-slate-800 mb-2">{score.section}</h3>
+                      <p className="text-slate-600 mb-4">{score.question}</p>
+                      {score.comment && (
+                        <div className="bg-white p-4 rounded-lg border">
+                          <h4 className="font-semibold text-slate-700 mb-2">Comments:</h4>
+                          <p className="text-slate-600 italic">"{score.comment}"</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="ml-6 text-center">
+                      <div className={`text-4xl font-bold mb-1 ${
+                        score.rating === "NA" ? "text-slate-400" :
+                        typeof score.rating === "number" && score.rating >= 2.5 ? "text-emerald-600" :
+                        typeof score.rating === "number" && score.rating >= 2 ? "text-yellow-600" :
+                        "text-red-600"
+                      }`}>
+                        {score.rating === "NA" ? "N/A" : score.rating}
+                      </div>
+                      <div className="text-sm text-slate-500">
+                        {score.rating !== "NA" && "out of 3.0"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {selectedSubmission.final_comment && (
+              <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+                <h3 className="text-xl font-bold text-slate-800 mb-3">Final Evaluation Comments</h3>
+                <p className="text-slate-700 leading-relaxed">{selectedSubmission.final_comment}</p>
               </div>
             )}
           </CardContent>
@@ -540,7 +725,9 @@ export default function ReportingPage() {
       </div>
 
       <div className="max-w-7xl mx-auto p-6">
-        {view === "overview" ? <OverviewDashboard /> : <IndividualDashboard />}
+        {view === "overview" && <OverviewDashboard />}
+        {view === "individual" && <IndividualDashboard />}
+        {view === "submission" && <SubmissionDetailView />}
       </div>
     </div>
   );
