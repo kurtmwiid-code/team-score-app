@@ -39,7 +39,7 @@ if (supabaseUrl && supabaseKey) {
 // --- Data Arrays ---
 const salesReps = [
   "Desmaine", "Jonathan", "Kyle", "Jean", "JP", 
-  "Phumla", "Michelle B", "Tiyani", "Hadya", "Banele"
+  "Phumla", "Michelle B", "Tiyani", "Hadya", "Banele", "Susan"
 ];
 
 const qcAgents = ["Jennifer", "Popi"];

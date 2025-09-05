@@ -199,16 +199,17 @@ export default function HomePage() {
   // Helper function to assign roles (you can enhance this)
   const getRole = (name: string): string => {
     const roles: { [key: string]: string } = {
-      'Desmaine': 'Senior Developer',
-      'Jonathan': 'Project Manager',
-      'Kyle': 'UI/UX Designer',
-      'Jean': 'Backend Developer',
-      'JP': 'DevOps Engineer',
-      'Phumla': 'QA Engineer',
-      'Michelle B': 'Data Analyst',
-      'Tiyani': 'Frontend Developer',
-      'Hadya': 'Business Analyst',
-      'Banele': 'Full Stack Developer'
+      'Desmaine': 'Sales Representative',
+      'Jonathan': 'Sales Representative',
+      'Kyle': 'Sales Representative',
+      'Jean': 'Sales Representative',
+      'JP': 'Sales Representative',
+      'Phumla': 'Sales Representative',
+      'Michelle B': 'Sales Representative',
+      'Tiyani': 'Sales Representative',
+      'Hadya': 'Sales Representative',
+      'Banele': 'Sales Representative', 
+      'Susan': 'Sales Representative'
     };
     return roles[name] || 'Team Member';
   };

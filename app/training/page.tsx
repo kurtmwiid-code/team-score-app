@@ -74,6 +74,7 @@ const salesReps = [
   "Tiyani",
   "Hadya",
   "Banele",
+  "Susan"
 ];
 
 const qcAgents = ["Jennifer", "Popi"];
@@ -1078,13 +1079,12 @@ export default function TrainingPage() {
   };
 
   const handleSubmitExample = async () => {
-    if (
-      !formData.sales_rep ||
-      !formData.section ||
-      !formData.property_address ||
-      !formData.timestamp_start ||
-      !formData.description
-    ) {
+  if (
+  !formData.sales_rep ||
+  !formData.section ||
+  !formData.property_address ||
+  !formData.timestamp_start
+) {
       setErrorMessage("Please fill in all required fields");
       setShowError(true);
       setTimeout(() => setShowError(false), 5000);
@@ -1167,8 +1167,7 @@ export default function TrainingPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
       {/* Success/Error Messages */}
       {showSuccess && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-emerald-100 border border-emerald-400 text-emerald-700 px-6 py-4 rounded-xl flex items-center gap-3 shadow-2xl max-w-md">
-          <span className="text-emerald-500 text-xl">✅</span>
+  <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] bg-emerald-100 border border-emerald-400 text-emerald-700 px-6 py-4 rounded-xl flex items-center gap-3 shadow-2xl max-w-md">
           <div>
             <span className="font-bold">Training Example Added!</span>
             <p className="text-sm">
