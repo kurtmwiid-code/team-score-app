@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { createClient } from "@supabase/supabase-js";
+import AuthWrapper from '@/components/AuthWrapper';
 import { 
   BarChart3, 
   Settings, 
@@ -357,6 +358,7 @@ export default function HomePage() {
 
   if (loading) {
     return (
+      <AuthWrapper>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
         <Sidebar />
         <div className={`${sidebarOpen ? 'ml-72' : 'ml-20'} transition-all duration-300 flex items-center justify-center min-h-screen`}>
@@ -366,10 +368,11 @@ export default function HomePage() {
           </div>
         </div>
       </div>
-    );
-  }
-
+    </AuthWrapper>
+  );
+}
   return (
+    <AuthWrapper>
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
       <Sidebar />
       <div className={`${sidebarOpen ? 'ml-72' : 'ml-20'} transition-all duration-300`}>
@@ -625,5 +628,6 @@ export default function HomePage() {
         </div>
       </div>
     </div>
-  );
+  </AuthWrapper>
+);
 }

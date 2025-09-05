@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { Home, FileText, User, TrendingUp, TrendingDown, Calendar, MapPin, Award, ArrowLeft, Filter, Search, ChevronDown, ChevronUp, Eye } from "lucide-react";
+import { Home, FileText, User, TrendingUp, TrendingDown, Calendar, MapPin, Award, ArrowLeft, Filter, Search, ChevronDown, ChevronUp, Eye, Trash2 } from "lucide-react";
 
 // --- Types ---
 type RepPerformance = {
@@ -179,7 +179,7 @@ export default function ReportingPage() {
         console.error("Error loading rep submissions:", error);
         return;
       }
-
+      
       // Transform the data - Fix: Add type annotation to map parameter
       const transformedSubmissions: Submission[] = submissionsData?.map((submission: any) => ({
         id: submission.id.toString(),
@@ -227,6 +227,38 @@ export default function ReportingPage() {
       score: rep.averageByCategory[category] || 0,
       maxScore: 3
     }));
+  };
+
+  const deleteSubmission = async (submissionId: string) => {
+    if (!supabase) return;
+    
+    try {
+      // Delete submission scores first (foreign key constraint)
+      const { error: scoresError } = await supabase
+        .from('submission_scores')
+        .delete()
+        .eq('submission_id', submissionId);
+      
+      if (scoresError) throw scoresError;
+      
+      // Then delete the main submission
+      const { error: submissionError } = await supabase
+        .from('submissions')
+        .delete()
+        .eq('id', submissionId);
+      
+      if (submissionError) throw submissionError;
+      
+      // Refresh data
+      if (selectedRep) {
+        await loadRepSubmissions(selectedRep);
+      }
+      await loadRepData();
+      
+    } catch (error) {
+      console.error('Error deleting submission:', error);
+      alert('Error deleting submission. Please try again.');
+    }
   };
 
   const filteredReps = repData.filter(rep => 

@@ -916,7 +916,7 @@ const AddExampleForm: React.FC<AddExampleFormProps> = ({
           {/* Description */}
           <div className="mb-6">
             <label className="block text-sm font-bold text-slate-700 mb-2">
-              What made this example excellent? *
+              What made this example excellent?
             </label>
             <textarea
               className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-[#1F3C88] focus:ring-2 focus:ring-[#1F3C88]/20 transition-all"
