@@ -23,7 +23,8 @@ import {
   Menu,
   X,
   ChevronRight,
-  BookOpen
+  BookOpen, 
+  LogOut
 } from "lucide-react";
 
 // --- TypeScript Interfaces ---
@@ -88,6 +89,15 @@ export default function HomePage() {
     departmentData: [],
     topPerformers: []
   });
+
+    // ADD THIS LOGOUT FUNCTION HERE
+  const handleLogout = async () => {
+    const supabase = createClient(
+      "https://qcfgxqtlkqttqbrwygol.supabase.co", 
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjZmd4cXRsa3F0dHFicnd5Z29sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MzczNjcsImV4cCI6MjA3MjIxMzM2N30.rN-zOVDOtJdwoRSO0Yi5tr3tK3MGVPJhwvV9yBjUnF0"
+    );
+    await supabase.auth.signOut();
+  };
 
   // Load real data from Supabase
   useEffect(() => {
@@ -304,6 +314,19 @@ export default function HomePage() {
             </Link>
           ))}
         </nav>
+
+        {/* Add logout button */}
+        {sidebarOpen && (
+          <div className="mt-4 px-2">
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 group hover:bg-red-50 hover:shadow-md text-red-600"
+            >
+              <LogOut className="w-6 h-6" />
+              <span className="font-medium">Sign Out</span>
+            </button>
+          </div>
+        )}
 
         {sidebarOpen && !loading && (
           <div className="mt-8 mx-2 p-4 bg-gradient-to-r from-[#1F3C88]/5 to-blue-500/5 rounded-xl border border-[#1F3C88]/20">
