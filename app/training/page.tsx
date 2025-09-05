@@ -31,6 +31,7 @@ interface TrainingExample {
   qc_agent: string;
   property_address: string;
   call_date: string;
+  call_time?: string;
   section: string;
   timestamp_start: string;
   timestamp_end?: string;
@@ -163,6 +164,7 @@ type OverviewDashboardProps = {
       qc_agent: string;
       property_address: string;
       call_date: string;
+      call_time: string;
       section: string;
       timestamp_start: string;
       timestamp_end: string;
@@ -549,6 +551,7 @@ const SectionDetailView: React.FC<SectionDetailViewProps> = ({
                             <span className="flex items-center gap-1">
                               <Calendar className="w-4 h-4" />
                               {new Date(example.call_date).toLocaleDateString()}
+                              {example.call_time && ` at ${example.call_time}`}
                             </span>
                             <span className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
@@ -648,6 +651,7 @@ type AddExampleFormProps = {
     qc_agent: string;
     property_address: string;
     call_date: string;
+    call_time: string;
     section: string;
     timestamp_start: string;
     timestamp_end: string;
@@ -777,6 +781,46 @@ const AddExampleForm: React.FC<AddExampleFormProps> = ({
                   }))
                 }
               />
+            </div>
+            {/* Call Time */}
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-2">
+                Call Time
+              </label>
+              <select
+                className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-[#1F3C88] focus:ring-2 focus:ring-[#1F3C88]/20 transition-all"
+                value={formData.call_time}
+                onChange={(e) =>
+                  setFormData((prev: any) => ({
+                    ...prev,
+                    call_time: e.target.value,
+                  }))
+                }
+              >
+                <option value="">Select Call Time</option>
+                <option value="8:00 AM">8:00 AM</option>
+                <option value="8:30 AM">8:30 AM</option>
+                <option value="9:00 AM">9:00 AM</option>
+                <option value="9:30 AM">9:30 AM</option>
+                <option value="10:00 AM">10:00 AM</option>
+                <option value="10:30 AM">10:30 AM</option>
+                <option value="11:00 AM">11:00 AM</option>
+                <option value="11:30 AM">11:30 AM</option>
+                <option value="12:00 PM">12:00 PM</option>
+                <option value="12:30 PM">12:30 PM</option>
+                <option value="1:00 PM">1:00 PM</option>
+                <option value="1:30 PM">1:30 PM</option>
+                <option value="2:00 PM">2:00 PM</option>
+                <option value="2:30 PM">2:30 PM</option>
+                <option value="3:00 PM">3:00 PM</option>
+                <option value="3:30 PM">3:30 PM</option>
+                <option value="4:00 PM">4:00 PM</option>
+                <option value="4:30 PM">4:30 PM</option>
+                <option value="5:00 PM">5:00 PM</option>
+                <option value="5:30 PM">5:30 PM</option>
+                <option value="6:00 PM">6:00 PM</option>
+                <option value="6:30 PM">6:30 PM</option>
+              </select>
             </div>
 
             {/* Section */}
@@ -978,6 +1022,7 @@ export default function TrainingPage() {
     qc_agent: "",
     property_address: "",
     call_date: "",
+    call_time: "",
     section: "",
     timestamp_start: "",
     timestamp_end: "",
@@ -1062,6 +1107,7 @@ export default function TrainingPage() {
         qc_agent: "",
         property_address: "",
         call_date: "",
+        call_time: "",
         section: "",
         timestamp_start: "",
         timestamp_end: "",

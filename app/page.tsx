@@ -21,7 +21,8 @@ import {
   FilePlus,
   Menu,
   X,
-  ChevronRight
+  ChevronRight,
+  BookOpen
 } from "lucide-react";
 
 // --- TypeScript Interfaces ---
@@ -222,6 +223,14 @@ export default function HomePage() {
       gradient: "from-[#1F3C88] to-blue-600",
       stats: `${realData.totalSubmissions} Evaluations`,
     },
+     {
+    title: "Training",
+    description: "Curated examples of excellent call techniques by section.",
+    href: "/training",
+    icon: <BookOpen className="h-10 w-10 text-white" />,
+    gradient: "from-emerald-500 to-emerald-600",
+    stats: "Training Library",
+   },
     {
       title: "Reporting",
       description: "View analytics and performance reports.",
@@ -270,6 +279,7 @@ export default function HomePage() {
           {[
             { id: 'home', label: 'Home', icon: Home, href: '/', count: realData.totalReps.toString() },
             { id: 'scoring', label: 'Scoring', icon: FilePlus, href: '/scoring', count: realData.totalSubmissions.toString() },
+            { id: 'training', label: 'Training', icon: BookOpen, href: '/training', count: 'Library' },
             { id: 'reporting', label: 'Reporting', icon: BarChart3, href: '/reporting', count: realData.totalReps.toString() },
             { id: 'settings', label: 'Settings', icon: Settings, href: '/settings', count: '5' }
           ].map(item => (
