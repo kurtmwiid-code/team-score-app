@@ -1,6 +1,6 @@
 "use client";
 
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from "@supabase/supabase-js";
 import { useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 
@@ -11,7 +11,10 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const supabase = createClientComponentClient();
+  const supabase = createClient(
+  "https://qcfgxqtlkqttqbrwygol.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjZmd4cXRsa3F0dHFicnd5Z29sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MzczNjcsImV4cCI6MjA3MjIxMzM2N30.rN-zOVDOtJdwoRSO0Yi5tr3tK3MGVPJhwvV9yBjUnF0"
+);
 
   useEffect(() => {
     const getUser = async () => {
