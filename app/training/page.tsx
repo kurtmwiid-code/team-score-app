@@ -23,8 +23,10 @@ import {
   X,
   Award,
   Target,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
-import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+
 /* ----------------------------- Types ----------------------------- */
 interface TrainingExample {
   id: string;
@@ -51,6 +53,12 @@ interface SectionStats {
   great_count: number;
   good_count: number;
   latest_addition: string;
+}
+
+interface CollapsibleTrainingCardProps {
+  example: TrainingExample;
+  isExpanded: boolean;
+  onToggle: () => void;
 }
 
 /* ------------------------ Supabase (yours) ----------------------- */
@@ -152,9 +160,6 @@ const deleteTrainingExample = async (id: string) => {
 };
 
 /* ===================== PRESENTATION COMPONENTS ===================== */
-/* NOTE: These are OUTSIDE the page component so React
-   does NOT remount them on every keystroke. This fixes the
-   “click after each character” focus-loss bug. */
 
 type OverviewDashboardProps = {
   examples: TrainingExample[];
@@ -376,6 +381,8 @@ type SectionDetailViewProps = {
   setFormData: React.Dispatch<any>;
   onDelete: (id: string) => Promise<void>;
   onReload: () => Promise<void>;
+  expandedCards: Set<string>;
+  toggleCard: (cardId: string) => void;
 };
 
 const SectionDetailView: React.FC<SectionDetailViewProps> = ({
@@ -390,6 +397,8 @@ const SectionDetailView: React.FC<SectionDetailViewProps> = ({
   setFormData,
   onDelete,
   onReload,
+  expandedCards,
+  toggleCard,
 }) => {
   if (!selectedSection) return null;
 
@@ -520,132 +529,178 @@ const SectionDetailView: React.FC<SectionDetailViewProps> = ({
             </div>
           ) : (
             <div className="space-y-3">
-  {sectionExamples.map((example: TrainingExample) => (
-    <CollapsibleTrainingCard
-      key={example.id}
-      example={example}
-      isExpanded={expandedCards.has(example.id)}
-      onToggle={() => toggleCard(example.id)}
-    />
-  ))}
-</div>
-                    key={example.id}
-                    className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200 p-6"
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-r from-[#1F3C88] to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
-                          {example.sales_rep.charAt(0)}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-xl font-bold text-slate-800">
-                              {example.sales_rep}
-                            </h3>
-                            <span
-                              className={`px-3 py-1 rounded-full text-sm font-medium ${qualityConfig?.color}`}
-                            >
-                              {qualityConfig?.icon} {example.quality_level}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-4 text-sm text-slate-600 mb-2">
-                            <span className="flex items-center gap-1">
-                              <MapPin className="w-4 h-4" />
-                              {example.property_address}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-4 h-4" />
-                              {new Date(example.call_date).toLocaleDateString()}
-                              {example.call_time && ` at ${example.call_time}`}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-4 h-4" />
-                              {example.timestamp_start}
-                              {example.timestamp_end &&
-                                ` - ${example.timestamp_end}`}
-                            </span>
-                          </div>
-                          {example.qc_agent && (
-                            <div className="text-sm text-slate-600">
-                              <span className="flex items-center gap-1">
-                                <User className="w-4 h-4" />
-                                QC Agent: {example.qc_agent}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" variant="ghost" className="text-[#1F3C88]">
-                          <Volume2 className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="ghost" className="text-slate-600">
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-red-600"
-                          onClick={async () => {
-                            if (
-                              confirm(
-                                "Are you sure you want to delete this training example?"
-                              )
-                            ) {
-                              await onDelete(example.id);
-                              await onReload();
-                            }
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="bg-white rounded-lg p-4 mb-4">
-                      <h4 className="font-semibold text-slate-800 mb-2">
-                        What made this excellent:
-                      </h4>
-                      <p className="text-slate-700 leading-relaxed">
-                        {example.description}
-                      </p>
-                    </div>
-
-                    {example.key_techniques.length > 0 && (
-                      <div className="mb-4">
-                        <h4 className="font-semibold text-slate-800 mb-2">
-                          Key Techniques Used:
-                        </h4>
-                        <div className="flex flex-wrap gap-2">
-                          {example.key_techniques.map(
-                            (technique: string, index: number) => (
-                              <span
-                                key={index}
-                                className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm"
-                              >
-                                {technique}
-                              </span>
-                            )
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {example.notes && (
-                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                        <h4 className="font-semibold text-amber-800 mb-2">
-                          Additional Notes:
-                        </h4>
-                        <p className="text-amber-700">{example.notes}</p>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+              {sectionExamples.map((example: TrainingExample) => (
+                <CollapsibleTrainingCard
+                  key={example.id}
+                  example={example}
+                  isExpanded={expandedCards.has(example.id)}
+                  onToggle={() => toggleCard(example.id)}
+                />
+              ))}
             </div>
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+};
+
+const CollapsibleTrainingCard: React.FC<CollapsibleTrainingCardProps> = ({
+  example,
+  isExpanded,
+  onToggle
+}) => {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number>(0);
+
+  useEffect(() => {
+    if (contentRef.current) {
+      setHeight(isExpanded ? contentRef.current.scrollHeight : 0);
+    }
+  }, [isExpanded]);
+
+  const getQualityBadgeColor = (quality: string) => {
+    switch (quality?.toLowerCase()) {
+      case 'excellent': return 'bg-green-100 text-green-800 border-green-200';
+      case 'great': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'good': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const formatDate = (date: string | Date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
+      <div 
+        className="p-4 cursor-pointer"
+        onClick={onToggle}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                {isExpanded ? (
+                  <ChevronDown className="h-5 w-5 text-gray-400" />
+                ) : (
+                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                )}
+              </div>
+              
+              <div className="flex-shrink-0">
+                <h3 className="text-sm font-medium text-gray-900 truncate">
+                  {example.sales_rep || 'Unknown Rep'}
+                </h3>
+              </div>
+
+              <div className="flex-shrink-0">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getQualityBadgeColor(example.quality_level)}`}>
+                  {example.quality_level || 'Not Rated'}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-2 flex items-center justify-between text-sm text-gray-500">
+              <span className="truncate">
+                {example.property_address || 'No address provided'}
+              </span>
+              <span className="flex-shrink-0 ml-4">
+                {formatDate(example.created_at)}
+              </span>
+            </div>
+          </div>
+
+          <div className="ml-4 flex-shrink-0">
+            <button
+              type="button"
+              className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+            >
+              {isExpanded ? 'Collapse' : 'Expand'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div 
+        style={{
+          height: `${height}px`,
+          transition: 'height 0.3s ease-in-out',
+          overflow: 'hidden'
+        }}
+      >
+        <div ref={contentRef} className="border-t border-gray-200">
+          <div className="p-4 space-y-4">
+            {example.description && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 mb-2">Description</h4>
+                <p className="text-sm text-gray-600">{example.description}</p>
+              </div>
+            )}
+
+            {example.key_techniques && example.key_techniques.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 mb-2">Techniques Used</h4>
+                <div className="flex flex-wrap gap-1">
+                  {example.key_techniques.map((technique: string, index: number) => (
+                    <span key={index} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                      {technique}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {example.notes && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 mb-2">Notes</h4>
+                <p className="text-sm text-gray-600">{example.notes}</p>
+              </div>
+            )}
+
+            <div>
+              <h4 className="text-sm font-medium text-gray-900 mb-2">Call Details</h4>
+              <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                <div>
+                  <span className="font-medium">Date:</span> {example.call_date}
+                </div>
+                {example.call_time && (
+                  <div>
+                    <span className="font-medium">Time:</span> {example.call_time}
+                  </div>
+                )}
+                <div>
+                  <span className="font-medium">Section:</span> {example.section}
+                </div>
+                <div>
+                  <span className="font-medium">QC Agent:</span> {example.qc_agent}
+                </div>
+              </div>
+            </div>
+
+            {(example.timestamp_start || example.timestamp_end) && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 mb-2">Recording Timestamps</h4>
+                <div className="text-sm text-gray-600">
+                  {example.timestamp_start && (
+                    <div><span className="font-medium">Start:</span> {example.timestamp_start}</div>
+                  )}
+                  {example.timestamp_end && (
+                    <div><span className="font-medium">End:</span> {example.timestamp_end}</div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
@@ -703,7 +758,6 @@ const AddExampleForm: React.FC<AddExampleFormProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            {/* Sales Rep */}
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">
                 Sales Rep *
@@ -727,7 +781,6 @@ const AddExampleForm: React.FC<AddExampleFormProps> = ({
               </select>
             </div>
 
-            {/* QC Agent */}
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">
                 QC Agent
@@ -751,7 +804,6 @@ const AddExampleForm: React.FC<AddExampleFormProps> = ({
               </select>
             </div>
 
-            {/* Property Address */}
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">
                 Property Address *
@@ -770,7 +822,6 @@ const AddExampleForm: React.FC<AddExampleFormProps> = ({
               />
             </div>
 
-            {/* Call Date */}
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">
                 Call Date
@@ -787,7 +838,7 @@ const AddExampleForm: React.FC<AddExampleFormProps> = ({
                 }
               />
             </div>
-            {/* Call Time */}
+
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">
                 Call Time
@@ -828,7 +879,6 @@ const AddExampleForm: React.FC<AddExampleFormProps> = ({
               </select>
             </div>
 
-            {/* Section */}
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">
                 Training Section *
@@ -852,7 +902,6 @@ const AddExampleForm: React.FC<AddExampleFormProps> = ({
               </select>
             </div>
 
-            {/* Quality Level */}
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">
                 Quality Level *
@@ -876,7 +925,6 @@ const AddExampleForm: React.FC<AddExampleFormProps> = ({
               </select>
             </div>
 
-            {/* Start / End */}
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">
                 Start Time *
@@ -917,7 +965,6 @@ const AddExampleForm: React.FC<AddExampleFormProps> = ({
             </div>
           </div>
 
-          {/* Description */}
           <div className="mb-6">
             <label className="block text-sm font-bold text-slate-700 mb-2">
               What made this example excellent?
@@ -937,7 +984,6 @@ const AddExampleForm: React.FC<AddExampleFormProps> = ({
             />
           </div>
 
-          {/* Key Techniques */}
           <div className="mb-6">
             <label className="block text-sm font-bold text-slate-700 mb-2">
               Key Techniques Used
@@ -973,7 +1019,6 @@ const AddExampleForm: React.FC<AddExampleFormProps> = ({
             </div>
           </div>
 
-          {/* Additional Notes */}
           <div className="mb-8">
             <label className="block text-sm font-bold text-slate-700 mb-2">
               Additional Notes
@@ -990,7 +1035,6 @@ const AddExampleForm: React.FC<AddExampleFormProps> = ({
             />
           </div>
 
-          {/* Actions */}
           <div className="flex justify-end gap-3">
             <Button variant="outline" onClick={onClose}>
               Cancel
@@ -1004,178 +1048,6 @@ const AddExampleForm: React.FC<AddExampleFormProps> = ({
           </div>
         </CardContent>
       </Card>
-    </div>
-  );
-};
-
-// ADD THIS NEW INTERFACE:
-interface CollapsibleTrainingCardProps {
-  example: TrainingExample;
-  isExpanded: boolean;
-  onToggle: () => void;
-}
-// ADD THE COMPONENT HERE:
-const CollapsibleTrainingCard: React.FC<CollapsibleTrainingCardProps> = ({
-  example,
-  isExpanded,
-  onToggle
-}) => {
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [height, setHeight] = useState<number>(0);
-
-  useEffect(() => {
-    if (contentRef.current) {
-      setHeight(isExpanded ? contentRef.current.scrollHeight : 0);
-    }
-  }, [isExpanded]);
-
-  // Quality badge color logic
-  const getQualityBadgeColor = (quality: string) => {
-    switch (quality?.toLowerCase()) {
-      case 'excellent': return 'bg-green-100 text-green-800 border-green-200';
-      case 'great': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'good': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const formatDate = (date: string | Date) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
-      {/* Collapsed Header */}
-      <div 
-        className="p-4 cursor-pointer"
-        onClick={onToggle}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center space-x-3">
-              <div className="flex-shrink-0">
-                {isExpanded ? (
-                  <ChevronDownIcon className="h-5 w-5 text-gray-400" />
-                ) : (
-                  <ChevronRightIcon className="h-5 w-5 text-gray-400" />
-                )}
-              </div>
-              
-              <div className="flex-shrink-0">
-                <h3 className="text-sm font-medium text-gray-900 truncate">
-                  {example.sales_rep || 'Unknown Rep'}
-                </h3>
-              </div>
-
-              <div className="flex-shrink-0">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getQualityBadgeColor(example.quality_level)}`}>
-                  {example.quality_level || 'Not Rated'}
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-2 flex items-center justify-between text-sm text-gray-500">
-              <span className="truncate">
-                {example.property_address || 'No address provided'}
-              </span>
-              <span className="flex-shrink-0 ml-4">
-                {formatDate(example.created_at)}
-              </span>
-            </div>
-          </div>
-
-          <div className="ml-4 flex-shrink-0">
-            <button
-              type="button"
-              className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-            >
-              {isExpanded ? 'Collapse' : 'Expand'}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Expandable Content */}
-      <div 
-        style={{
-          height: `${height}px`,
-          transition: 'height 0.3s ease-in-out',
-          overflow: 'hidden'
-        }}
-      >
-        <div ref={contentRef} className="border-t border-gray-200">
-          <div className="p-4 space-y-4">
-            {example.description && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-900 mb-2">Description</h4>
-                <p className="text-sm text-gray-600">{example.description}</p>
-              </div>
-            )}
-
-            {example.key_techniques && example.key_techniques.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-900 mb-2">Techniques Used</h4>
-                <div className="flex flex-wrap gap-1">
-                  {example.key_techniques.map((technique: string, index: number) => (
-                    <span key={index} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
-                      {technique}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {example.notes && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-900 mb-2">Notes</h4>
-                <p className="text-sm text-gray-600">{example.notes}</p>
-              </div>
-            )}
-
-            {/* Call Details */}
-            <div>
-              <h4 className="text-sm font-medium text-gray-900 mb-2">Call Details</h4>
-              <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
-                <div>
-                  <span className="font-medium">Date:</span> {example.call_date}
-                </div>
-                {example.call_time && (
-                  <div>
-                    <span className="font-medium">Time:</span> {example.call_time}
-                  </div>
-                )}
-                <div>
-                  <span className="font-medium">Section:</span> {example.section}
-                </div>
-                <div>
-                  <span className="font-medium">QC Agent:</span> {example.qc_agent}
-                </div>
-              </div>
-            </div>
-
-            {/* Timestamps */}
-            {(example.timestamp_start || example.timestamp_end) && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-900 mb-2">Recording Timestamps</h4>
-                <div className="text-sm text-gray-600">
-                  {example.timestamp_start && (
-                    <div><span className="font-medium">Start:</span> {example.timestamp_start}</div>
-                  )}
-                  {example.timestamp_end && (
-                    <div><span className="font-medium">End:</span> {example.timestamp_end}</div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
@@ -1210,7 +1082,6 @@ export default function TrainingPage() {
   });
 
   const [newTechnique, setNewTechnique] = useState("");
-    // ADD THE STEP 1 CODE HERE:
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
   const toggleCard = (cardId: string) => {
@@ -1267,12 +1138,12 @@ export default function TrainingPage() {
   };
 
   const handleSubmitExample = async () => {
-  if (
-  !formData.sales_rep ||
-  !formData.section ||
-  !formData.property_address ||
-  !formData.timestamp_start
-) {
+    if (
+      !formData.sales_rep ||
+      !formData.section ||
+      !formData.property_address ||
+      !formData.timestamp_start
+    ) {
       setErrorMessage("Please fill in all required fields");
       setShowError(true);
       setTimeout(() => setShowError(false), 5000);
@@ -1289,7 +1160,6 @@ export default function TrainingPage() {
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 5000);
 
-      // reset form
       setFormData({
         sales_rep: "",
         qc_agent: "",
@@ -1351,123 +1221,123 @@ export default function TrainingPage() {
         ex.description.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-   return (
-      <AuthWrapper> 
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
-      {/* Success/Error Messages */}
-      {showSuccess && (
-  <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] bg-emerald-100 border border-emerald-400 text-emerald-700 px-6 py-4 rounded-xl flex items-center gap-3 shadow-2xl max-w-md">
-          <div>
-            <span className="font-bold">Training Example Added!</span>
-            <p className="text-sm">
-              The example has been saved to the training library.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {showError && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-xl flex items-center gap-3 shadow-2xl max-w-md">
-          <span className="text-red-500 text-xl">❌</span>
-          <div>
-            <span className="font-bold">Error:</span>
-            <p className="text-sm">{errorMessage}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Header */}
-      <div className="bg-white/95 backdrop-blur-sm shadow-lg border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-[#1F3C88] to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                <BookOpen className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-slate-800">
-                  Training Library
-                </h1>
-                <p className="text-slate-600">
-                  Curated examples of excellent call techniques
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <Link href="/">
-                <Button variant="outline" className="flex items-center gap-2">
-                  <Home className="w-4 h-4" />
-                  Dashboard
-                </Button>
-              </Link>
-              <Link href="/scoring">
-                <Button variant="outline" className="flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  Scoring
-                </Button>
-              </Link>
-              <Link href="/reporting">
-                <Button variant="outline" className="flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  Reports
-                </Button>
-              </Link>
+  return (
+    <AuthWrapper>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
+        {showSuccess && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] bg-emerald-100 border border-emerald-400 text-emerald-700 px-6 py-4 rounded-xl flex items-center gap-3 shadow-2xl max-w-md">
+            <div>
+              <span className="font-bold">Training Example Added!</span>
+              <p className="text-sm">
+                The example has been saved to the training library.
+              </p>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto p-6">
-        {loading ? (
-          <div className="text-center py-20">
-            <div className="text-2xl font-bold text-slate-700 mb-2">
-              Loading Training Library...
-            </div>
-            <p className="text-slate-500">Fetching curated call examples</p>
-          </div>
-        ) : (
-          <>
-            {view === "overview" && (
-              <OverviewDashboard
-                examples={examples}
-                sectionStats={sectionStats}
-                setShowAddForm={setShowAddForm}
-                setFormData={setFormData}
-                onRefresh={loadData}
-                onOpenSection={handleSectionClick}
-              />
-            )}
-            {view === "section" && (
-              <SectionDetailView
-                selectedSection={selectedSection}
-                filteredExamples={filteredExamples}
-                sectionStats={sectionStats}
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
-                qualityFilter={qualityFilter}
-                setQualityFilter={setQualityFilter}
-                setShowAddForm={setShowAddForm}
-                setFormData={setFormData}
-                onDelete={deleteTrainingExample}
-                onReload={loadData}
-              />
-            )}
-            {showAddForm && (
-              <AddExampleForm
-                formData={formData}
-                setFormData={setFormData}
-                newTechnique={newTechnique}
-                setNewTechnique={setNewTechnique}
-                onAddTechnique={addTechnique}
-                onRemoveTechnique={removeTechnique}
-                onClose={() => setShowAddForm(false)}
-                onSave={handleSubmitExample}
-              />
-            )}
-          </>
         )}
+
+        {showError && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-xl flex items-center gap-3 shadow-2xl max-w-md">
+            <span className="text-red-500 text-xl">❌</span>
+            <div>
+              <span className="font-bold">Error:</span>
+              <p className="text-sm">{errorMessage}</p>
+            </div>
+          </div>
+        )}
+
+        <div className="bg-white/95 backdrop-blur-sm shadow-lg border-b border-slate-200">
+          <div className="max-w-7xl mx-auto px-6 py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-[#1F3C88] to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <BookOpen className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-slate-800">
+                    Training Library
+                  </h1>
+                  <p className="text-slate-600">
+                    Curated examples of excellent call techniques
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Link href="/">
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Home className="w-4 h-4" />
+                    Dashboard
+                  </Button>
+                </Link>
+                <Link href="/scoring">
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Scoring
+                  </Button>
+                </Link>
+                <Link href="/reporting">
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Reports
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto p-6">
+          {loading ? (
+            <div className="text-center py-20">
+              <div className="text-2xl font-bold text-slate-700 mb-2">
+                Loading Training Library...
+              </div>
+              <p className="text-slate-500">Fetching curated call examples</p>
+            </div>
+          ) : (
+            <>
+              {view === "overview" && (
+                <OverviewDashboard
+                  examples={examples}
+                  sectionStats={sectionStats}
+                  setShowAddForm={setShowAddForm}
+                  setFormData={setFormData}
+                  onRefresh={loadData}
+                  onOpenSection={handleSectionClick}
+                />
+              )}
+              {view === "section" && (
+                <SectionDetailView
+                  selectedSection={selectedSection}
+                  filteredExamples={filteredExamples}
+                  sectionStats={sectionStats}
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                  qualityFilter={qualityFilter}
+                  setQualityFilter={setQualityFilter}
+                  setShowAddForm={setShowAddForm}
+                  setFormData={setFormData}
+                  onDelete={deleteTrainingExample}
+                  onReload={loadData}
+                  expandedCards={expandedCards}
+                  toggleCard={toggleCard}
+                />
+              )}
+              {showAddForm && (
+                <AddExampleForm
+                  formData={formData}
+                  setFormData={setFormData}
+                  newTechnique={newTechnique}
+                  setNewTechnique={setNewTechnique}
+                  onAddTechnique={addTechnique}
+                  onRemoveTechnique={removeTechnique}
+                  onClose={() => setShowAddForm(false)}
+                  onSave={handleSubmitExample}
+                />
+              )}
+            </>
+          )}
+        </div>
       </div>
-    </div>
-  </AuthWrapper>
-);
+    </AuthWrapper>
+  );
 }
