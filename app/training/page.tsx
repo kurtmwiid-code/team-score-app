@@ -5,6 +5,7 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import AuthWrapper from '@/components/AuthWrapper';
 import {
   Home,
   FileText,
@@ -1163,7 +1164,8 @@ export default function TrainingPage() {
         ex.description.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-  return (
+   return (
+      <AuthWrapper> 
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
       {/* Success/Error Messages */}
       {showSuccess && (
@@ -1279,5 +1281,6 @@ export default function TrainingPage() {
         )}
       </div>
     </div>
-  );
+  </AuthWrapper>
+);
 }

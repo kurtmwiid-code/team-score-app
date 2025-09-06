@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import AuthWrapper from '@/components/AuthWrapper'; 
 import Link from "next/link";
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { Home, FileText, User, TrendingUp, TrendingDown, Calendar, MapPin, Award, ArrowLeft, Filter, Search, ChevronDown, ChevronUp, Eye, Trash2 } from "lucide-react";
@@ -724,6 +725,7 @@ export default function ReportingPage() {
   };
 
   return (
+    <AuthWrapper>
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
       {/* Header */}
       <div className="bg-white/95 backdrop-blur-sm shadow-lg border-b border-slate-200">
@@ -762,5 +764,6 @@ export default function ReportingPage() {
         {view === "submission" && <SubmissionDetailView />}
       </div>
     </div>
-  );
+  </AuthWrapper>
+);
 }

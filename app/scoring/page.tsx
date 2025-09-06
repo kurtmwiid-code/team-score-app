@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import AuthWrapper from '@/components/AuthWrapper';
 import Link from "next/link";
 import { Home, FileText } from "lucide-react";
 
@@ -275,6 +276,7 @@ export default function ScoringPage() {
   const currentScore = calculateCurrentScore();
 
   return (
+    <AuthWrapper>
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
       {/* Header */}
       <div className="bg-white/95 backdrop-blur-sm shadow-lg border-b border-slate-200">
@@ -491,5 +493,6 @@ export default function ScoringPage() {
         </div>
       </div>
     </div>
-  );
+  </AuthWrapper>
+);
 }
