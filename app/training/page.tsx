@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ import {
   Award,
   Target,
 } from "lucide-react";
-
+import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 /* ----------------------------- Types ----------------------------- */
 interface TrainingExample {
   id: string;
@@ -519,13 +519,16 @@ const SectionDetailView: React.FC<SectionDetailViewProps> = ({
               </Button>
             </div>
           ) : (
-            <div className="space-y-6">
-              {sectionExamples.map((example: TrainingExample) => {
-                const qualityConfig = qualityLevels.find(
-                  (q) => q.value === example.quality_level
-                );
-                return (
-                  <div
+            <div className="space-y-3">
+  {sectionExamples.map((example: TrainingExample) => (
+    <CollapsibleTrainingCard
+      key={example.id}
+      example={example}
+      isExpanded={expandedCards.has(example.id)}
+      onToggle={() => toggleCard(example.id)}
+    />
+  ))}
+</div>
                     key={example.id}
                     className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200 p-6"
                   >
@@ -1005,6 +1008,178 @@ const AddExampleForm: React.FC<AddExampleFormProps> = ({
   );
 };
 
+// ADD THIS NEW INTERFACE:
+interface CollapsibleTrainingCardProps {
+  example: TrainingExample;
+  isExpanded: boolean;
+  onToggle: () => void;
+}
+// ADD THE COMPONENT HERE:
+const CollapsibleTrainingCard: React.FC<CollapsibleTrainingCardProps> = ({
+  example,
+  isExpanded,
+  onToggle
+}) => {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number>(0);
+
+  useEffect(() => {
+    if (contentRef.current) {
+      setHeight(isExpanded ? contentRef.current.scrollHeight : 0);
+    }
+  }, [isExpanded]);
+
+  // Quality badge color logic
+  const getQualityBadgeColor = (quality: string) => {
+    switch (quality?.toLowerCase()) {
+      case 'excellent': return 'bg-green-100 text-green-800 border-green-200';
+      case 'great': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'good': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const formatDate = (date: string | Date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
+      {/* Collapsed Header */}
+      <div 
+        className="p-4 cursor-pointer"
+        onClick={onToggle}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                {isExpanded ? (
+                  <ChevronDownIcon className="h-5 w-5 text-gray-400" />
+                ) : (
+                  <ChevronRightIcon className="h-5 w-5 text-gray-400" />
+                )}
+              </div>
+              
+              <div className="flex-shrink-0">
+                <h3 className="text-sm font-medium text-gray-900 truncate">
+                  {example.sales_rep || 'Unknown Rep'}
+                </h3>
+              </div>
+
+              <div className="flex-shrink-0">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getQualityBadgeColor(example.quality_level)}`}>
+                  {example.quality_level || 'Not Rated'}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-2 flex items-center justify-between text-sm text-gray-500">
+              <span className="truncate">
+                {example.property_address || 'No address provided'}
+              </span>
+              <span className="flex-shrink-0 ml-4">
+                {formatDate(example.created_at)}
+              </span>
+            </div>
+          </div>
+
+          <div className="ml-4 flex-shrink-0">
+            <button
+              type="button"
+              className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+            >
+              {isExpanded ? 'Collapse' : 'Expand'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Expandable Content */}
+      <div 
+        style={{
+          height: `${height}px`,
+          transition: 'height 0.3s ease-in-out',
+          overflow: 'hidden'
+        }}
+      >
+        <div ref={contentRef} className="border-t border-gray-200">
+          <div className="p-4 space-y-4">
+            {example.description && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 mb-2">Description</h4>
+                <p className="text-sm text-gray-600">{example.description}</p>
+              </div>
+            )}
+
+            {example.key_techniques && example.key_techniques.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 mb-2">Techniques Used</h4>
+                <div className="flex flex-wrap gap-1">
+                  {example.key_techniques.map((technique: string, index: number) => (
+                    <span key={index} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                      {technique}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {example.notes && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 mb-2">Notes</h4>
+                <p className="text-sm text-gray-600">{example.notes}</p>
+              </div>
+            )}
+
+            {/* Call Details */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-900 mb-2">Call Details</h4>
+              <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                <div>
+                  <span className="font-medium">Date:</span> {example.call_date}
+                </div>
+                {example.call_time && (
+                  <div>
+                    <span className="font-medium">Time:</span> {example.call_time}
+                  </div>
+                )}
+                <div>
+                  <span className="font-medium">Section:</span> {example.section}
+                </div>
+                <div>
+                  <span className="font-medium">QC Agent:</span> {example.qc_agent}
+                </div>
+              </div>
+            </div>
+
+            {/* Timestamps */}
+            {(example.timestamp_start || example.timestamp_end) && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 mb-2">Recording Timestamps</h4>
+                <div className="text-sm text-gray-600">
+                  {example.timestamp_start && (
+                    <div><span className="font-medium">Start:</span> {example.timestamp_start}</div>
+                  )}
+                  {example.timestamp_end && (
+                    <div><span className="font-medium">End:</span> {example.timestamp_end}</div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /* ============================ PAGE ============================ */
 export default function TrainingPage() {
   const [view, setView] = useState<"overview" | "section">("overview");
@@ -1035,6 +1210,18 @@ export default function TrainingPage() {
   });
 
   const [newTechnique, setNewTechnique] = useState("");
+    // ADD THE STEP 1 CODE HERE:
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+
+  const toggleCard = (cardId: string) => {
+    const newExpanded = new Set(expandedCards);
+    if (newExpanded.has(cardId)) {
+      newExpanded.delete(cardId);
+    } else {
+      newExpanded.add(cardId);
+    }
+    setExpandedCards(newExpanded);
+  };
 
   useEffect(() => {
     loadData();
