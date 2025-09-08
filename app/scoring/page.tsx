@@ -29,13 +29,10 @@ type Submission = {
 };
 
 // --- Supabase Setup (Fixed) ---
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_KEY;
+const supabaseUrl = "https://qcfgxqtlkqttqbrwygol.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjZmd4cXRsa3F0dHEtnd5Z29sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MzczNjcsImV4cCI6MjA3MjIxMzM2N30.rN-zOVDOtJdwoRSO0Yi5tr3tK3MGVPJhwvV9yBjUnF0";
 
-let supabase: SupabaseClient | null = null;
-if (supabaseUrl && supabaseKey) {
-  supabase = createClient(supabaseUrl, supabaseKey);
-}
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // --- Data Arrays ---
 const salesReps = [
@@ -115,11 +112,6 @@ const categories = [
 
 // --- DB Save Helper (Fixed) ---
 const saveSubmissionToDatabase = async (submission: Submission) => {
-  if (!supabase) {
-    console.error("Supabase not initialized");
-    throw new Error("Database connection failed");
-  }
-
   try {
     // Insert into submissions table
     const { data: submissionData, error: submissionError } = await supabase
@@ -205,13 +197,6 @@ export default function ScoringPage() {
     
     if (!selectedRep || !selectedQC || !propertyAddress || !leadType) {
       setErrorMessage("Please fill in all required fields: Sales Rep, QC Agent, Property Address, and Lead Type.");
-      setShowError(true);
-      setTimeout(() => setShowError(false), 5000);
-      return;
-    }
-    
-    if (!supabase) {
-      setErrorMessage("Database connection not available. Please check environment variables.");
       setShowError(true);
       setTimeout(() => setShowError(false), 5000);
       return;

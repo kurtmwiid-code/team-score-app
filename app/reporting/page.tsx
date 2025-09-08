@@ -45,14 +45,11 @@ type EditableSubmission = {
   final_comment: string;
 };
 
-// --- Supabase Setup ---
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_KEY;
+// --- Supabase Setup (Fixed) ---
+const supabaseUrl = "https://qcfgxqtlkqttqbrwygol.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjZmd4cXRsa3F0dHEtnd5Z29sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MzczNjcsImV4cCI6MjA3MjIxMzM2N30.rN-zOVDOtJdwoRSO0Yi5tr3tK3MGVPJhwvV9yBjUnF0";
 
-let supabase: SupabaseClient | null = null;
-if (supabaseUrl && supabaseKey) {
-  supabase = createClient(supabaseUrl, supabaseKey);
-}
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const categories = [
   "Intro", "Bonding & Rapport", "Magic Problem", "First Ask", 
@@ -437,12 +434,6 @@ export default function ReportingPage() {
 
   // Load real data from Supabase with caching
   const loadRepData = useCallback(async (forceRefresh = false) => {
-    if (!supabase) {
-      console.error("Supabase not initialized");
-      setLoading(false);
-      return;
-    }
-
     // Check cache first (5 minutes TTL)
     const now = Date.now();
     if (!forceRefresh && dataCache && (now - dataCache.timestamp) < 5 * 60 * 1000) {
@@ -545,8 +536,6 @@ export default function ReportingPage() {
   }, [dataCache]);
 
   const loadRepSubmissions = useCallback(async (repName: string) => {
-    if (!supabase) return;
-
     setLoading(true);
     try {
       const { data: submissionsData, error } = await supabase
@@ -613,8 +602,6 @@ export default function ReportingPage() {
   }, []);
 
   const handleEditSubmission = useCallback(async (id: string, updates: EditableSubmission) => {
-    if (!supabase) return;
-    
     try {
       const { error } = await supabase
         .from('submissions')
@@ -650,8 +637,6 @@ export default function ReportingPage() {
   }, [selectedRep, selectedSubmission, loadRepSubmissions, loadRepData]);
 
   const deleteSubmission = useCallback(async (submissionId: string) => {
-    if (!supabase) return;
-    
     try {
       // Delete submission scores first (foreign key constraint)
       const { error: scoresError } = await supabase
