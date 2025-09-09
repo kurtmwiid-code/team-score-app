@@ -3,7 +3,12 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { ArrowLeft, Search, Filter, ChevronDown, ChevronUp, Eye, Trash2, Edit, Save, X, AlertTriangle, Award, Users, TrendingUp, BarChart3, Home, FileText } from "lucide-react";
-import { supabase } from '@/lib/supabaseClient'
+
+// --- Supabase Setup (Fixed) ---
+const supabaseUrl = "https://qcfgxqtlkqttqbrwygol.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjZmd4cXRsa3F0dHFicnd5Z29sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MzczNjcsImV4cCI6MjA3MjIxMzM2N30.rN-zOVDOtJdwoRSO0Yi5tr3tK3MGVPJhwvV9yBjUnF0";
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // --- Types ---
 type RepPerformance = {
@@ -68,14 +73,14 @@ const AppHeader = memo(({ currentView }: { currentView: string }) => (
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <button className="px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-2">
+          <a href="/" className="px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-2">
             <Home className="w-4 h-4" />
             Dashboard
-          </button>
-          <button className="px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors flex items-center gap-2">
+          </a>
+          <a href="/scoring" className="px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors flex items-center gap-2">
             <FileText className="w-4 h-4" />
             Scoring
-          </button>
+          </a>
         </div>
       </div>
     </div>
@@ -205,7 +210,7 @@ const TeamLeaderboard = memo(({ repData, onRepClick }: {
   <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
     <h2 className="text-xl font-semibold text-gray-900 mb-6">Team Performance Leaderboard</h2>
     <div className="space-y-4">
-      {repData.slice(0, 5).map((rep, index) => (
+      {repData.slice(0, 10).map((rep, index) => (
         <RepCard
           key={rep.name}
           rep={rep}
@@ -704,11 +709,171 @@ export default function ReportingPage() {
     return repData.find(rep => rep.name === selectedRep);
   }, [repData, selectedRep]);
 
-    if (loading) {
-      return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
-          <AppHeader currentView="loading" />
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
+        <AppHeader currentView="loading" />
+        <div className="max-w-7xl mx-auto px-8">
+          <div className="text-center mb-8">
+            <div className="h-8 bg-gray-200 rounded w-64 mx-auto mb-4 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-96 mx-auto animate-pulse"></div>
+          </div>
+          <div className="grid gap-6">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-24 bg-gray-200 rounded-xl animate-pulse"></div>
+            ))}
+          </div>
         </div>
-      );
-    }
+      </div>
+    );
   }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
+      <AppHeader currentView={view} />
+      
+      <div className="max-w-7xl mx-auto px-8 pb-8">
+        {view === "overview" ? (
+          /* Overview View */
+          <div className="space-y-8">
+            {/* Team Performance Stats */}
+            <TeamStatsCards stats={teamStats} />
+
+            {/* Search and Filter Bar */}
+            <div className="flex gap-4 mb-6">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search representatives..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1F3C88] focus:border-transparent bg-white"
+                />
+              </div>
+              <button 
+                onClick={loadRepData}
+                className="px-6 py-3 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2 transition-colors"
+              >
+                <Filter className="w-4 h-4" />
+                Refresh
+              </button>
+            </div>
+
+            {/* Team Performance Leaderboard */}
+            <TeamLeaderboard 
+              repData={repData.filter(rep => !searchTerm || rep.name.toLowerCase().includes(searchTerm.toLowerCase()))} 
+              onRepClick={handleRepClick} 
+            />
+
+            {/* Show message if no data */}
+            {repData.length === 0 && !loading && (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <BarChart3 className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No evaluations yet</h3>
+                <p className="text-gray-600 mb-6">Submit some evaluations first to see performance reports.</p>
+                <a 
+                  href="/scoring" 
+                  className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-[#1F3C88] to-blue-600 text-white rounded-lg hover:shadow-lg transition-all"
+                >
+                  Start Scoring
+                </a>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Individual Rep View */
+          <div className="space-y-8">
+            {/* Back Button and Rep Header */}
+            <div className="flex items-center gap-4 mb-6">
+              <button
+                onClick={handleBackToOverview}
+                className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors rounded-lg hover:bg-white/50"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Overview
+              </button>
+            </div>
+
+            {/* Selected Rep Performance Card */}
+            {selectedRepData && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 bg-gradient-to-r from-[#1F3C88] to-[#2B4F8F] rounded-xl flex items-center justify-center text-white text-xl font-bold">
+                      {selectedRepData.name.charAt(0)}
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-1">{selectedRepData.name}</h2>
+                      <p className="text-gray-600">{selectedRepData.totalSubmissions} total evaluations</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-8 text-center">
+                    <div>
+                      <div className="text-3xl font-bold text-gray-900 mb-1">{selectedRepData.percentage}%</div>
+                      <div className="text-sm text-gray-600">Performance</div>
+                    </div>
+                    <div>
+                      <div className="text-3xl font-bold text-gray-900 mb-1">{selectedRepData.overallScore.toFixed(1)}</div>
+                      <div className="text-sm text-gray-600">Average Score</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Search for submissions */}
+            <div className="relative mb-6">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search submissions..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1F3C88] focus:border-transparent bg-white"
+              />
+            </div>
+
+            {/* Submissions List */}
+            <div className="space-y-6">
+              {filteredSubmissions.length > 0 ? (
+                filteredSubmissions.map(submission => (
+                  <SubmissionCard
+                    key={submission.id}
+                    submission={submission}
+                    onEdit={handleEditSubmission}
+                    onDelete={handleDeleteSubmission}
+                    onExpand={handleExpandSubmission}
+                    isExpanded={expandedSubmissions.has(submission.id)}
+                    editingSubmission={editingSubmission}
+                    editForm={editForm}
+                    onSaveEdit={handleSaveEdit}
+                    onCancelEdit={handleCancelEdit}
+                    onEditFormChange={handleEditFormChange}
+                  />
+                ))
+              ) : (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <FileText className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No submissions found</h3>
+                  <p className="text-gray-600">
+                    {searchTerm 
+                      ? `No submissions match "${searchTerm}"`
+                      : selectedRep 
+                        ? `No submissions found for ${selectedRep}`
+                        : "No submissions available"
+                    }
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
