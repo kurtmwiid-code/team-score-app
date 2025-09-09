@@ -704,7 +704,11 @@ export default function ReportingPage() {
     return repData.find(rep => rep.name === selectedRep);
   }, [repData, selectedRep]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
-        <AppHeader currentView="loading" />
+    if (loading) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
+          <AppHeader currentView="loading" />
+        </div>
+      );
+    }
+  }
