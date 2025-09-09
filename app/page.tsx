@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from '@/lib/supabaseClient';
 import AuthWrapper from '@/components/AuthWrapper';
 import { 
   BarChart3, 
@@ -92,12 +92,8 @@ export default function HomePage() {
 
     // ADD THIS LOGOUT FUNCTION HERE
   const handleLogout = async () => {
-    const supabase = createClient(
-      "https://qcfgxqtlkqttqbrwygol.supabase.co", 
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjZmd4cXRsa3F0dHFicnd5Z29sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MzczNjcsImV4cCI6MjA3MjIxMzM2N30.rN-zOVDOtJdwoRSO0Yi5tr3tK3MGVPJhwvV9yBjUnF0"
-    );
-    await supabase.auth.signOut();
-  };
+  await supabase.auth.signOut();
+};
 
   // Load real data from Supabase
   useEffect(() => {
