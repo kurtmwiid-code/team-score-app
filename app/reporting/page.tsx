@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { createClient } from '@supabase/supabase-js'
-import { ArrowLeft, Search, Filter, ChevronDown, ChevronUp, Eye, Trash2, Edit, Save, X, AlertTriangle, Award, Users, TrendingUp, BarChart3, Home, FileText } from "lucide-react";
+import { ArrowLeft, Search, Filter, ChevronDown, ChevronUp, Eye, Trash2, Edit, Save, X, AlertTriangle, Award, Users, TrendingUp, BarChart3, Home, FileText, Calendar, MapPin } from "lucide-react";
 
 // --- Supabase Setup (Fixed) ---
 const supabaseUrl = "https://qcfgxqtlkqttqbrwygol.supabase.co";
@@ -19,6 +19,7 @@ type RepPerformance = {
   averageByCategory: Record<string, number>;
   trend: "up" | "down";
   lastEvaluation: string;
+  recentSubmissions: Submission[];
 };
 
 type Submission = {
@@ -51,6 +52,8 @@ type TeamStats = {
   totalEvaluations: number;
   improvementRate: number;
   monthlyChange: number;
+  activeLeadRate: number;
+  totalProperties: number;
 };
 
 const categories = [
@@ -89,7 +92,7 @@ const AppHeader = memo(({ currentView }: { currentView: string }) => (
 
 // --- Team Stats Component ---
 const TeamStatsCards = memo(({ stats }: { stats: TeamStats }) => (
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-8">
     {/* Team Average Score */}
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
       <div className="flex items-center gap-4">
@@ -98,7 +101,7 @@ const TeamStatsCards = memo(({ stats }: { stats: TeamStats }) => (
         </div>
         <div className="flex-1">
           <h3 className="text-2xl font-bold text-slate-800">{stats.teamAverage.toFixed(1)}</h3>
-          <p className="text-slate-600 text-sm">Team Average Score</p>
+          <p className="text-slate-600 text-sm">Team Average</p>
           <p className="text-emerald-600 text-xs font-medium">+{stats.monthlyChange.toFixed(1)} this month</p>
         </div>
       </div>
@@ -113,7 +116,7 @@ const TeamStatsCards = memo(({ stats }: { stats: TeamStats }) => (
         <div className="flex-1">
           <h3 className="text-2xl font-bold text-slate-800">{stats.totalEvaluations}</h3>
           <p className="text-slate-600 text-sm">Total Evaluations</p>
-          <p className="text-blue-600 text-xs font-medium">This month</p>
+          <p className="text-blue-600 text-xs font-medium">All time</p>
         </div>
       </div>
     </div>
@@ -127,7 +130,49 @@ const TeamStatsCards = memo(({ stats }: { stats: TeamStats }) => (
         <div className="flex-1">
           <h3 className="text-2xl font-bold text-slate-800">{stats.improvementRate}%</h3>
           <p className="text-slate-600 text-sm">Improvement Rate</p>
-          <p className="text-purple-600 text-xs font-medium">Reps trending up</p>
+          <p className="text-purple-600 text-xs font-medium">Trending up</p>
+        </div>
+      </div>
+    </div>
+
+    {/* Active Lead Rate */}
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+          <TrendingUp className="w-6 h-6 text-white" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-2xl font-bold text-slate-800">{stats.activeLeadRate}%</h3>
+          <p className="text-slate-600 text-sm">Active Lead Rate</p>
+          <p className="text-green-600 text-xs font-medium">Success rate</p>
+        </div>
+      </div>
+    </div>
+
+    {/* Total Properties */}
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
+          <MapPin className="w-6 h-6 text-white" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-2xl font-bold text-slate-800">{stats.totalProperties}</h3>
+          <p className="text-slate-600 text-sm">Properties</p>
+          <p className="text-orange-600 text-xs font-medium">Evaluated</p>
+        </div>
+      </div>
+    </div>
+
+    {/* This Month */}
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center">
+          <Calendar className="w-6 h-6 text-white" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-2xl font-bold text-slate-800">{new Date().getDate()}</h3>
+          <p className="text-slate-600 text-sm">Days This Month</p>
+          <p className="text-indigo-600 text-xs font-medium">{new Date().toLocaleString('default', { month: 'long' })}</p>
         </div>
       </div>
     </div>
@@ -170,6 +215,7 @@ const RepCard = memo(({ rep, index, onRepClick }: {
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-gray-900 mb-1">{rep.name}</h3>
               <p className="text-sm text-gray-600">{rep.totalSubmissions} evaluations</p>
+              <p className="text-xs text-gray-500">Last: {new Date(rep.lastEvaluation).toLocaleDateString()}</p>
             </div>
           </div>
           
@@ -192,7 +238,7 @@ const RepCard = memo(({ rep, index, onRepClick }: {
               <div className={`w-2 h-2 rounded-full ${rep.trend === 'up' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
               <span className={`text-sm font-medium flex items-center gap-1 ${rep.trend === 'up' ? 'text-emerald-600' : 'text-red-600'}`}>
                 <TrendingUp className={`w-3 h-3 ${rep.trend === 'down' ? 'rotate-180' : ''}`} />
-                Improving
+                {rep.trend === 'up' ? 'Improving' : 'Needs Focus'}
               </span>
             </div>
           </div>
@@ -222,6 +268,7 @@ const TeamLeaderboard = memo(({ repData, onRepClick }: {
   </div>
 ));
 
+// --- Submission Card Component ---
 const SubmissionCard = memo(({ 
   submission, 
   onEdit, 
@@ -519,14 +566,21 @@ export default function ReportingPage() {
           percentage: 0,
           totalSubmissions: 0,
           averageByCategory: {},
-          trend: "up",
-          lastEvaluation: submission.submission_date
+          trend: "up", // Default to up, could be calculated from historical data
+          lastEvaluation: submission.submission_date,
+          recentSubmissions: []
         });
       }
 
       const rep = repMap.get(repName)!;
       rep.totalSubmissions += 1;
       rep.overallScore += submission.overall_average;
+      rep.recentSubmissions.push(submission);
+
+      // Update last evaluation date
+      if (new Date(submission.submission_date) > new Date(rep.lastEvaluation)) {
+        rep.lastEvaluation = submission.submission_date;
+      }
 
       // Calculate category averages
       categories.forEach(category => {
@@ -554,6 +608,9 @@ export default function ReportingPage() {
         rep.averageByCategory[category] = rep.averageByCategory[category] / rep.totalSubmissions;
       });
 
+      // Sort recent submissions by date (newest first)
+      rep.recentSubmissions.sort((a, b) => new Date(b.submission_date).getTime() - new Date(a.submission_date).getTime());
+
       return rep;
     });
 
@@ -562,8 +619,8 @@ export default function ReportingPage() {
 
   // Calculate team stats
   const teamStats = useMemo((): TeamStats => {
-    if (repData.length === 0) {
-      return { teamAverage: 0, totalEvaluations: 0, improvementRate: 0, monthlyChange: 0 };
+    if (repData.length === 0 || submissions.length === 0) {
+      return { teamAverage: 0, totalEvaluations: 0, improvementRate: 0, monthlyChange: 0, activeLeadRate: 0, totalProperties: 0 };
     }
 
     const teamAverage = repData.reduce((sum, rep) => sum + rep.overallScore, 0) / repData.length;
@@ -571,13 +628,20 @@ export default function ReportingPage() {
     const improvingReps = repData.filter(rep => rep.trend === 'up').length;
     const improvementRate = Math.round((improvingReps / repData.length) * 100);
     
+    const activeLeads = submissions.filter(sub => sub.lead_type === 'Active').length;
+    const activeLeadRate = Math.round((activeLeads / submissions.length) * 100);
+    
+    const uniqueProperties = new Set(submissions.map(sub => sub.property_address)).size;
+    
     return {
       teamAverage,
       totalEvaluations,
       improvementRate,
-      monthlyChange: 0.3 // Mock value - could be calculated from historical data
+      monthlyChange: 0.3, // Mock value - could be calculated from historical data
+      activeLeadRate,
+      totalProperties: uniqueProperties
     };
-  }, [repData]);
+  }, [repData, submissions]);
 
   // Event handlers
   const handleRepClick = useCallback((repName: string) => {
@@ -709,6 +773,19 @@ export default function ReportingPage() {
     return repData.find(rep => rep.name === selectedRep);
   }, [repData, selectedRep]);
 
+  // Group submissions by date for better organization
+  const groupedSubmissions = useMemo(() => {
+    const grouped: Record<string, Submission[]> = {};
+    filteredSubmissions.forEach(submission => {
+      const date = new Date(submission.submission_date).toLocaleDateString();
+      if (!grouped[date]) {
+        grouped[date] = [];
+      }
+      grouped[date].push(submission);
+    });
+    return grouped;
+  }, [filteredSubmissions]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
@@ -808,6 +885,7 @@ export default function ReportingPage() {
                     <div>
                       <h2 className="text-2xl font-bold text-gray-900 mb-1">{selectedRepData.name}</h2>
                       <p className="text-gray-600">{selectedRepData.totalSubmissions} total evaluations</p>
+                      <p className="text-sm text-gray-500">Last evaluation: {new Date(selectedRepData.lastEvaluation).toLocaleDateString()}</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-8 text-center">
@@ -836,24 +914,39 @@ export default function ReportingPage() {
               />
             </div>
 
-            {/* Submissions List */}
-            <div className="space-y-6">
-              {filteredSubmissions.length > 0 ? (
-                filteredSubmissions.map(submission => (
-                  <SubmissionCard
-                    key={submission.id}
-                    submission={submission}
-                    onEdit={handleEditSubmission}
-                    onDelete={handleDeleteSubmission}
-                    onExpand={handleExpandSubmission}
-                    isExpanded={expandedSubmissions.has(submission.id)}
-                    editingSubmission={editingSubmission}
-                    editForm={editForm}
-                    onSaveEdit={handleSaveEdit}
-                    onCancelEdit={handleCancelEdit}
-                    onEditFormChange={handleEditFormChange}
-                  />
-                ))
+            {/* Date-Grouped Submissions List */}
+            <div className="space-y-8">
+              {Object.keys(groupedSubmissions).length > 0 ? (
+                Object.entries(groupedSubmissions)
+                  .sort(([dateA], [dateB]) => new Date(dateB).getTime() - new Date(dateA).getTime())
+                  .map(([date, dateSubmissions]) => (
+                    <div key={date} className="space-y-4">
+                      <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                        <Calendar className="w-5 h-5" />
+                        {date}
+                        <span className="text-sm font-normal text-gray-500">
+                          ({dateSubmissions.length} evaluation{dateSubmissions.length !== 1 ? 's' : ''})
+                        </span>
+                      </h3>
+                      <div className="space-y-4 ml-7">
+                        {dateSubmissions.map(submission => (
+                          <SubmissionCard
+                            key={submission.id}
+                            submission={submission}
+                            onEdit={handleEditSubmission}
+                            onDelete={handleDeleteSubmission}
+                            onExpand={handleExpandSubmission}
+                            isExpanded={expandedSubmissions.has(submission.id)}
+                            editingSubmission={editingSubmission}
+                            editForm={editForm}
+                            onSaveEdit={handleSaveEdit}
+                            onCancelEdit={handleCancelEdit}
+                            onEditFormChange={handleEditFormChange}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))
               ) : (
                 <div className="text-center py-12">
                   <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-4">

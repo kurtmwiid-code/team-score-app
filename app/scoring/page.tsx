@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { ChevronDown, ChevronUp, Save, AlertCircle, CheckCircle, Star, Clock, User, MapPin, FileText, Building, Home, BarChart3 } from 'lucide-react'
+import { ChevronDown, ChevronUp, Save, AlertCircle, CheckCircle, Star, Clock, User, MapPin, FileText, Building, Home, BarChart3, Calendar } from 'lucide-react'
 
 // --- Supabase Setup (Fixed) ---
 const supabaseUrl = "https://qcfgxqtlkqttqbrwygol.supabase.co";
@@ -11,20 +11,27 @@ const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// --- Form Data Types ---
-interface Submission {
+// --- Types ---
+type ScoreItem = {
+  section: string;
+  question: string;
+  rating: 1 | 2 | 3 | "NA";
+  comment: string;
+};
+
+type Submission = {
   salesRep: string
   qcAgent: string
   propertyAddress: string
   leadType: string
-  callTime: string
+  callDateTime: string
   finalComment: string
   overallAverage: number
   submissionDate: string
-  scores: Record<string, Record<string, { rating: string; comment: string }>>
+  scores: Record<string, ScoreItem>
 }
 
-// --- Team Members ---
+// --- Team Members (Updated with Susan) ---
 const salesReps = [
   'Desmaine', 'Jonathan', 'Kyle', 'Jean', 'JP', 'Phumla', 'Michelle B', 'Tiyani', 'Hadya', 'Banele', 'Susan'
 ]
@@ -38,99 +45,113 @@ const leadTypes = [
   'Dead'
 ]
 
-// --- Categories and Questions ---
-const categories = {
-  "Intro": [
-    "Does the rep introduce themself and/or company?",
-    "Does the rep verify contact information?",
-    "Does the rep indicate what the call is about/regarding?"
-  ],
-  "Bonding & Rapport": [
-    "Does the rep establish rapport?",
-    "Is the rep conversational and not robotic?",
-    "Does the rep sound confident and knowledgeable?"
-  ],
-  "Magic Problem": [
-    "Does the rep ask about motivation to sell?",
-    "Does the rep ask about pain points?",
-    "Does the rep identify the customer's timeline?"
-  ],
-  "First Ask": [
-    "Does the rep ask for the address?",
-    "Does the rep ask for property condition details?"
-  ],
-  "Property & Condition Questions": [
-    "Does the rep ask detailed property questions?",
-    "Does the rep confirm property ownership?",
-    "Does the rep ask about repairs needed?"
-  ],
-  "Second Ask": [
-    "Does the rep ask for price expectations?",
-    "Does the rep manage price objections effectively?"
-  ],
-  "Second Call - The Close": [
-    "Does the rep schedule the next steps?",
-    "Does the rep confirm contact details for follow-up?",
-    "Does the rep maintain enthusiasm throughout?"
-  ],
-  "Overall Performance": [
-    "Professional communication throughout call",
-    "Active listening and appropriate responses",
-    "Overall call effectiveness"
-  ]
-}
+// --- Correct Categories and Questions ---
+const categories = [
+  { 
+    name: "Intro", 
+    questions: [
+      "Introduces self clearly and professionally", 
+      "States company name and purpose of call", 
+      "Confirms time availability with prospect"
+    ] 
+  },
+  { 
+    name: "Bonding & Rapport", 
+    questions: [
+      "Used open-ended questions to get the client talking", 
+      "Finds personal connection and builds trust", 
+      "Shows genuine interest and sincerity"
+    ] 
+  },
+  { 
+    name: "Magic Problem", 
+    questions: [
+      "Listens without interrupting", 
+      "Identifies core reason for selling. Goes down the Pain Funnel", 
+      "Summarizes and confirms understanding"
+    ] 
+  },
+  { 
+    name: "First Ask", 
+    questions: [
+      "Asks for first desired price confidently", 
+      "Asks about timeframe", 
+      "Explains our process clearly"
+    ] 
+  },
+  { 
+    name: "Property & Condition Questions", 
+    questions: [
+      "Collects decision maker information", 
+      "Gathered occupancy/tenant details", 
+      "Covered condition of all major systems and possible repairs"
+    ] 
+  },
+  { 
+    name: "Second Ask", 
+    questions: [
+      "Reviews repair estimate with seller", 
+      "Frames 'walk away' amount effectively", 
+      "Prepares seller for follow up call"
+    ] 
+  },
+  { 
+    name: "Second Call - The Close", 
+    questions: [
+      "Presents CASH and RBP offers clearly", 
+      "Uses seller motivation to position offer", 
+      "Handles objections confidently"
+    ] 
+  },
+  { 
+    name: "Overall Performance", 
+    questions: [
+      "Maintains positive, professional tone", 
+      "Follows script while adapting naturally", 
+      "Achieves call objective - closes the deal"
+    ] 
+  }
+];
 
 export default function ScoringPage() {
   // --- State Management ---
+  const [scores, setScores] = useState<Record<string, ScoreItem>>(
+    Object.fromEntries(
+      categories.flatMap((c) =>
+        c.questions.map((q) => [q, { section: c.name, question: q, rating: "NA", comment: "" }])
+      )
+    )
+  );
+
   const [salesRep, setSalesRep] = useState('')
   const [qcAgent, setQcAgent] = useState('')
   const [propertyAddress, setPropertyAddress] = useState('')
   const [leadType, setLeadType] = useState('')
-  const [callTime, setCallTime] = useState('')
+  const [callDateTime, setCallDateTime] = useState('')
   const [finalComment, setFinalComment] = useState('')
-  const [scores, setScores] = useState<Record<string, Record<string, { rating: string; comment: string }>>>({})
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [showError, setShowError] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
-  // Initialize scores structure
+  // Initialize expanded categories to show first category
   useEffect(() => {
-    const initialScores: Record<string, Record<string, { rating: string; comment: string }>> = {}
-    Object.entries(categories).forEach(([category, questions]) => {
-      initialScores[category] = {}
-      questions.forEach(question => {
-        initialScores[category][question] = { rating: '', comment: '' }
-      })
-    })
-    setScores(initialScores)
+    setExpandedCategories({ [categories[0].name]: true })
   }, [])
 
   // --- Helper Functions ---
-  const handleScoreChange = (category: string, question: string, rating: string) => {
+  const handleScoreChange = (question: string, rating: 1 | 2 | 3 | "NA") => {
     setScores(prev => ({
       ...prev,
-      [category]: {
-        ...prev[category],
-        [question]: {
-          ...prev[category][question],
-          rating
-        }
-      }
+      [question]: { ...prev[question], rating }
     }))
   }
 
-  const handleCommentChange = (category: string, question: string, comment: string) => {
+  const handleCommentChange = (question: string, comment: string) => {
     setScores(prev => ({
       ...prev,
-      [category]: {
-        ...prev[category],
-        [question]: {
-          ...prev[category][question],
-          comment
-        }
-      }
+      [question]: { ...prev[question], comment }
     }))
   }
 
@@ -142,19 +163,8 @@ export default function ScoringPage() {
   }
 
   const calculateOverallAverage = () => {
-    let total = 0
-    let count = 0
-    
-    Object.entries(scores).forEach(([category, questions]) => {
-      Object.entries(questions).forEach(([question, score]) => {
-        if (score.rating && score.rating !== 'NA') {
-          total += parseInt(score.rating)
-          count++
-        }
-      })
-    })
-    
-    return count > 0 ? total / count : 0
+    const validScores = Object.values(scores).filter(s => s.rating !== "NA") as { rating: number }[];
+    return validScores.length > 0 ? validScores.reduce((acc, s) => acc + s.rating, 0) / validScores.length : 0;
   }
 
   const validateForm = () => {
@@ -166,14 +176,7 @@ export default function ScoringPage() {
     }
 
     // Check if at least some scores are filled
-    let hasScores = false
-    Object.entries(scores).forEach(([category, questions]) => {
-      Object.entries(questions).forEach(([question, score]) => {
-        if (score.rating && score.rating !== '') {
-          hasScores = true
-        }
-      })
-    })
+    const hasScores = Object.values(scores).some(score => score.rating !== "NA")
 
     if (!hasScores) {
       setErrorMessage('Please provide at least some evaluation scores')
@@ -190,18 +193,17 @@ export default function ScoringPage() {
     setQcAgent('')
     setPropertyAddress('')
     setLeadType('')
-    setCallTime('')
+    setCallDateTime('')
     setFinalComment('')
     
     // Reset scores
-    const resetScores: Record<string, Record<string, { rating: string; comment: string }>> = {}
-    Object.entries(categories).forEach(([category, questions]) => {
-      resetScores[category] = {}
-      questions.forEach(question => {
-        resetScores[category][question] = { rating: '', comment: '' }
-      })
-    })
-    setScores(resetScores)
+    setScores(
+      Object.fromEntries(
+        categories.flatMap((c) =>
+          c.questions.map((q) => [q, { section: c.name, question: q, rating: "NA", comment: "" }])
+        )
+      )
+    )
   }
 
   const handleSubmit = async () => {
@@ -233,20 +235,15 @@ export default function ScoringPage() {
       const submissionId = submissionData[0].id
 
       // Prepare score records
-      const scoreRecords: any[] = []
-      Object.entries(scores).forEach(([category, questions]) => {
-        Object.entries(questions).forEach(([question, score]) => {
-          if (score.rating && score.rating !== '') {
-            scoreRecords.push({
-              submission_id: submissionId,
-              section: category,
-              question: question,
-              rating: score.rating,
-              comment: score.comment || ''
-            })
-          }
-        })
-      })
+      const scoreRecords = Object.values(scores)
+        .filter(score => score.rating !== "NA")
+        .map(score => ({
+          submission_id: submissionId,
+          section: score.section,
+          question: score.question,
+          rating: score.rating,
+          comment: score.comment || ''
+        }))
 
       // Insert scores
       if (scoreRecords.length > 0) {
@@ -275,20 +272,21 @@ export default function ScoringPage() {
   }
 
   const getCompletionPercentage = () => {
-    let totalQuestions = 0
-    let answeredQuestions = 0
-    
-    Object.entries(categories).forEach(([category, questions]) => {
-      questions.forEach(question => {
-        totalQuestions++
-        if (scores[category] && scores[category][question] && scores[category][question].rating) {
-          answeredQuestions++
-        }
-      })
-    })
-    
+    const totalQuestions = categories.reduce((sum, cat) => sum + cat.questions.length, 0)
+    const answeredQuestions = Object.values(scores).filter(score => score.rating !== "NA").length
     return totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0
   }
+
+  const calculateCurrentScore = () => {
+    const validScores = Object.values(scores).filter(s => s.rating !== "NA") as { rating: number }[];
+    if (validScores.length === 0) return { average: 0, percentage: 0, count: 0 };
+    
+    const average = validScores.reduce((acc, s) => acc + s.rating, 0) / validScores.length;
+    const percentage = (average / 3) * 100;
+    return { average: Math.round(average * 100) / 100, percentage: Math.round(percentage), count: validScores.length };
+  };
+
+  const currentScore = calculateCurrentScore();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
@@ -354,24 +352,6 @@ export default function ScoringPage() {
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Sales Rep */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <User className="w-4 h-4 inline mr-1" />
-                Sales Representative *
-              </label>
-              <select
-                value={salesRep}
-                onChange={(e) => setSalesRep(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#1F3C88] focus:border-transparent"
-              >
-                <option value="">Select Sales Rep</option>
-                {salesReps.map(rep => (
-                  <option key={rep} value={rep}>{rep}</option>
-                ))}
-              </select>
-            </div>
-
             {/* QC Agent */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -390,21 +370,38 @@ export default function ScoringPage() {
               </select>
             </div>
 
+            {/* Sales Rep */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <User className="w-4 h-4 inline mr-1" />
+                Sales Representative *
+              </label>
+              <select
+                value={salesRep}
+                onChange={(e) => setSalesRep(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#1F3C88] focus:border-transparent"
+              >
+                <option value="">Select Sales Rep</option>
+                {salesReps.map(rep => (
+                  <option key={rep} value={rep}>{rep}</option>
+                ))}
+              </select>
+            </div>
+
             {/* Lead Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <FileText className="w-4 h-4 inline mr-1" />
-                Lead Type *
+                Lead Status *
               </label>
               <select
                 value={leadType}
                 onChange={(e) => setLeadType(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#1F3C88] focus:border-transparent"
               >
-                <option value="">Select Lead Type</option>
-                {leadTypes.map(type => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
+                <option value="">Select Lead Status</option>
+                <option value="Active">🟢 Active Lead</option>
+                <option value="Dead">🔴 Dead Lead</option>
               </select>
             </div>
 
@@ -419,44 +416,59 @@ export default function ScoringPage() {
                 value={propertyAddress}
                 onChange={(e) => setPropertyAddress(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#1F3C88] focus:border-transparent"
-                placeholder="Enter property address"
+                placeholder="123 Main St, City, State ZIP"
               />
             </div>
 
-            {/* Call Time */}
+            {/* Call Date/Time */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Clock className="w-4 h-4 inline mr-1" />
-                Call Time (Optional)
+                <Calendar className="w-4 h-4 inline mr-1" />
+                Call Date & Time
               </label>
               <input
-                type="text"
-                value={callTime}
-                onChange={(e) => setCallTime(e.target.value)}
+                type="datetime-local"
+                value={callDateTime}
+                onChange={(e) => setCallDateTime(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#1F3C88] focus:border-transparent"
-                placeholder="e.g., 10:30 AM"
               />
             </div>
           </div>
+
+          {/* Current Score Display */}
+          {currentScore.count > 0 && (
+            <div className="mt-6 p-4 bg-gradient-to-r from-[#1F3C88]/10 to-blue-500/10 rounded-xl border border-[#1F3C88]/20">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-700">Current Score Progress:</span>
+                <div className="flex gap-6 text-sm">
+                  <span className="font-bold text-[#1F3C88]">Average: {currentScore.average}/3.0</span>
+                  <span className="font-bold text-emerald-600">Percentage: {currentScore.percentage}%</span>
+                  <span className="text-slate-600">Questions Scored: {currentScore.count}</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Scoring Categories */}
         <div className="space-y-6">
-          {Object.entries(categories).map(([category, questions]) => {
-            const isExpanded = expandedCategories[category]
-            const categoryScores = scores[category] || {}
-            const answeredCount = questions.filter(q => categoryScores[q]?.rating).length
+          {categories.map((category, categoryIndex) => {
+            const isExpanded = expandedCategories[category.name]
+            const answeredCount = category.questions.filter(q => scores[q]?.rating !== "NA").length
             
             return (
-              <div key={category} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div key={category.name} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <button
-                  onClick={() => toggleCategory(category)}
+                  onClick={() => toggleCategory(category.name)}
                   className="w-full px-6 py-4 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
                 >
                   <div className="flex items-center gap-4">
-                    <h3 className="text-lg font-semibold text-gray-900">{category}</h3>
+                    <div className="w-8 h-8 bg-gradient-to-r from-[#1F3C88] to-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
+                      {categoryIndex + 1}
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">{category.name}</h3>
                     <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                      {answeredCount}/{questions.length}
+                      {answeredCount}/{category.questions.length}
                     </span>
                   </div>
                   {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
@@ -464,49 +476,42 @@ export default function ScoringPage() {
                 
                 {isExpanded && (
                   <div className="p-6 space-y-6">
-                    {questions.map((question, qIndex) => {
-                      const currentScore = categoryScores[question] || { rating: '', comment: '' }
+                    {category.questions.map((question) => {
+                      const score = scores[question]
                       
                       return (
-                        <div key={qIndex} className="border-b border-gray-100 pb-6 last:border-b-0 last:pb-0">
-                          <h4 className="font-medium text-gray-900 mb-3">{question}</h4>
+                        <div key={question} className="border-b border-gray-100 pb-6 last:border-b-0 last:pb-0">
+                          <h4 className="font-medium text-gray-900 mb-4">{question}</h4>
                           
-                          {/* Enhanced Rating Options with Visual Buttons */}
-                          <div className="flex gap-3 mb-3">
-                            {['1', '2', '3', 'NA'].map(rating => (
-                              <label key={rating} className="flex items-center">
+                          {/* Enhanced Rating Options */}
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+                            {[
+                              { value: 1, label: "1 - Poor/Not Done", color: "bg-red-100 text-red-700 border-red-300 hover:bg-red-200" },
+                              { value: 2, label: "2 - Met Expectations", color: "bg-yellow-100 text-yellow-700 border-yellow-300 hover:bg-yellow-200" },
+                              { value: 3, label: "3 - Exceeded Expectations", color: "bg-emerald-100 text-emerald-700 border-emerald-300 hover:bg-emerald-200" },
+                              { value: "NA", label: "N/A - Not Applicable", color: "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200" }
+                            ].map((option) => (
+                              <label key={option.value} className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${score.rating === option.value ? option.color + ' ring-2 ring-offset-2 ring-current shadow-md' : 'bg-white border-slate-300 ' + option.color.replace('bg-', 'hover:bg-')}`}>
                                 <input
                                   type="radio"
-                                  name={`${category}-${qIndex}`}
-                                  value={rating}
-                                  checked={currentScore.rating === rating}
-                                  onChange={() => handleScoreChange(category, question, rating)}
+                                  name={question}
+                                  checked={score.rating === option.value}
+                                  onChange={() => handleScoreChange(question, option.value as 1 | 2 | 3 | "NA")}
                                   className="sr-only"
                                 />
-                                <div className={`px-4 py-2 rounded-lg border-2 cursor-pointer transition-all ${
-                                  currentScore.rating === rating
-                                    ? rating === 'NA' 
-                                      ? 'border-gray-400 bg-gray-100 text-gray-800'
-                                      : rating === '1'
-                                        ? 'border-red-400 bg-red-100 text-red-800'
-                                        : rating === '2'
-                                          ? 'border-yellow-400 bg-yellow-100 text-yellow-800'
-                                          : 'border-green-400 bg-green-100 text-green-800'
-                                    : 'border-gray-200 bg-white hover:border-gray-300'
-                                }`}>
-                                  {rating}
-                                </div>
+                                <div className={`w-4 h-4 rounded-full border-2 ${score.rating === option.value ? 'bg-current border-current' : 'border-slate-400'}`}></div>
+                                <span className="font-medium text-sm">{option.label}</span>
                               </label>
                             ))}
                           </div>
                           
                           {/* Comment Field */}
                           <textarea
-                            value={currentScore.comment}
-                            onChange={(e) => handleCommentChange(category, question, e.target.value)}
-                            placeholder="Optional comments..."
+                            value={score.comment}
+                            onChange={(e) => handleCommentChange(question, e.target.value)}
+                            placeholder="Add specific comments about this criteria..."
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#1F3C88] focus:border-transparent resize-none"
-                            rows={2}
+                            rows={3}
                           />
                         </div>
                       )
@@ -520,13 +525,13 @@ export default function ScoringPage() {
 
         {/* Final Comment */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Final Comments</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Final Comments & Overall Assessment</h3>
           <textarea
             value={finalComment}
             onChange={(e) => setFinalComment(e.target.value)}
-            placeholder="Optional overall comments about this evaluation..."
+            placeholder="Provide overall feedback, areas for improvement, strengths observed, etc..."
             className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#1F3C88] focus:border-transparent resize-none"
-            rows={4}
+            rows={5}
           />
         </div>
 
@@ -534,18 +539,18 @@ export default function ScoringPage() {
         <div className="sticky bottom-0 bg-white border-t border-gray-200 p-6 mt-8 -mx-8">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="text-sm text-gray-600">
-              Progress: {getCompletionPercentage()}% complete
-              {calculateOverallAverage() > 0 && (
+              Progress: {getCompletionPercentage()}% complete ({currentScore.count} questions scored)
+              {currentScore.count > 0 && (
                 <span className="ml-4">
-                  Current Average: {calculateOverallAverage().toFixed(1)}/3.0 ({Math.round((calculateOverallAverage() / 3) * 100)}%)
+                  Current Average: {currentScore.average}/3.0 ({currentScore.percentage}%)
                 </span>
               )}
             </div>
             <button
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !salesRep || !qcAgent || !propertyAddress || !leadType}
               className={`px-8 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all ${
-                isSubmitting
+                isSubmitting || !salesRep || !qcAgent || !propertyAddress || !leadType
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-gradient-to-r from-[#1F3C88] to-blue-600 hover:shadow-lg text-white'
               }`}
@@ -553,12 +558,12 @@ export default function ScoringPage() {
               {isSubmitting ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                  Submitting...
+                  Submitting Evaluation...
                 </>
               ) : (
                 <>
                   <Save className="w-4 h-4" />
-                  Submit Evaluation
+                  Submit Scoring Evaluation
                 </>
               )}
             </button>
