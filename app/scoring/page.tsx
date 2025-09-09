@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { ChevronDown, ChevronUp, Save, AlertCircle, CheckCircle, Star, Clock, User, MapPin, FileText, Building } from 'lucide-react'
+import { ChevronDown, ChevronUp, Save, AlertCircle, CheckCircle, Star, Clock, User, MapPin, FileText, Building, Home, BarChart3 } from 'lucide-react'
 
 // --- Supabase Setup (Fixed) ---
 const supabaseUrl = "https://qcfgxqtlkqttqbrwygol.supabase.co";
@@ -26,7 +26,7 @@ interface Submission {
 
 // --- Team Members ---
 const salesReps = [
-  'Desmaine', 'Jonathan', 'Kyle', 'Jean', 'JP', 'Phumla', 'Michelle B', 'Tiyani', 'Hadya', 'Banele'
+  'Desmaine', 'Jonathan', 'Kyle', 'Jean', 'JP', 'Phumla', 'Michelle B', 'Tiyani', 'Hadya', 'Banele', 'Susan'
 ]
 
 const qcAgents = [
@@ -259,7 +259,7 @@ export default function ScoringPage() {
 
       // Show success message
       setShowSuccess(true)
-      setTimeout(() => setShowSuccess(false), 4000)
+      setTimeout(() => setShowSuccess(false), 5000)
       
       // Reset form
       resetForm()
@@ -313,7 +313,7 @@ export default function ScoringPage() {
         </div>
       )}
 
-      {/* Header */}
+      {/* Enhanced Header with Navigation */}
       <div className="bg-gradient-to-r from-[#1F3C88] to-[#2B5AA0] text-white">
         <div className="max-w-7xl mx-auto px-8 py-6">
           <div className="flex items-center justify-between">
@@ -326,9 +326,19 @@ export default function ScoringPage() {
                 <p className="text-blue-100">Comprehensive sales evaluation platform</p>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold">{getCompletionPercentage()}%</div>
-              <div className="text-sm text-blue-100">Complete</div>
+            <div className="flex items-center gap-4">
+              <a href="/" className="px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-2">
+                <Home className="w-4 h-4" />
+                Dashboard
+              </a>
+              <a href="/reporting" className="px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Reports
+              </a>
+              <div className="text-right">
+                <div className="text-2xl font-bold">{getCompletionPercentage()}%</div>
+                <div className="text-sm text-blue-100">Complete</div>
+              </div>
             </div>
           </div>
         </div>
@@ -461,7 +471,7 @@ export default function ScoringPage() {
                         <div key={qIndex} className="border-b border-gray-100 pb-6 last:border-b-0 last:pb-0">
                           <h4 className="font-medium text-gray-900 mb-3">{question}</h4>
                           
-                          {/* Rating Options */}
+                          {/* Enhanced Rating Options with Visual Buttons */}
                           <div className="flex gap-3 mb-3">
                             {['1', '2', '3', 'NA'].map(rating => (
                               <label key={rating} className="flex items-center">
@@ -520,14 +530,14 @@ export default function ScoringPage() {
           />
         </div>
 
-        {/* Submit Button */}
+        {/* Enhanced Submit Button with Live Stats */}
         <div className="sticky bottom-0 bg-white border-t border-gray-200 p-6 mt-8 -mx-8">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="text-sm text-gray-600">
               Progress: {getCompletionPercentage()}% complete
               {calculateOverallAverage() > 0 && (
                 <span className="ml-4">
-                  Average Score: {calculateOverallAverage().toFixed(1)}
+                  Current Average: {calculateOverallAverage().toFixed(1)}/3.0 ({Math.round((calculateOverallAverage() / 3) * 100)}%)
                 </span>
               )}
             </div>
