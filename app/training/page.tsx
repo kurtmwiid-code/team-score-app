@@ -1,11 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useMemo } from "react";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import AuthWrapper from '@/components/AuthWrapper';
+import { supabase } from '@/lib/supabaseClient'
 import {
   Home,
   FileText,
@@ -26,6 +23,54 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
+
+// Beautiful component replacements - add these right after your imports
+const Card = ({ children, className = "", ...props }: any) => (
+  <div 
+    className={`bg-white rounded-xl border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 ${className}`} 
+    {...props}
+  >
+    {children}
+  </div>
+);
+
+const CardContent = ({ children, className = "", ...props }: any) => (
+  <div className={`p-6 ${className}`} {...props}>
+    {children}
+  </div>
+);
+
+const Button = ({ children, className = "", variant = "default", size = "default", disabled = false, ...props }: any) => {
+  const baseClasses = "inline-flex items-center justify-center rounded-lg font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
+  const variantClasses = {
+    default: "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md hover:shadow-lg focus:ring-blue-500",
+    outline: "border-2 border-gray-300 bg-white hover:bg-gray-50 text-gray-700 hover:border-gray-400",
+    destructive: "bg-red-600 hover:bg-red-700 text-white focus:ring-red-500",
+    secondary: "bg-gray-100 hover:bg-gray-200 text-gray-900"
+  };
+  const sizeClasses = {
+    default: "px-4 py-2 text-sm",
+    sm: "px-3 py-1.5 text-xs",
+    lg: "px-6 py-3 text-base"
+  };
+  
+  return (
+    <button 
+      className={`${baseClasses} ${variantClasses[variant as keyof typeof variantClasses]} ${sizeClasses[size as keyof typeof sizeClasses]} ${className}`} 
+      disabled={disabled}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+};
+
+// For Next.js Link compatibility
+const Link = ({ href, children, className = "", ...props }: any) => (
+  <a href={href} className={className} {...props}>
+    {children}
+  </a>
+);
 
 /* ----------------------------- Types ----------------------------- */
 interface TrainingExample {
@@ -66,14 +111,7 @@ interface RepStats {
 }
 
 /* ------------------------ Supabase Configuration ----------------------- */
-const supabaseUrl = "https://qcfgxqtlkqttqbrwygol.supabase.co";
-const supabaseKey =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjZmd4cXRsa3F0dHFicnd5Z29sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MzczNjcsImV4cCI6MjA3MjIxMzM2N30.rN-zOVDOtJdwoRSO0Yi5tr3tK3MGVPJhwvV9yBjUnF0";
 
-let supabase: SupabaseClient | null = null;
-if (supabaseUrl && supabaseKey) {
-  supabase = createClient(supabaseUrl, supabaseKey);
-}
 
 /* --------------------------- Constants --------------------------- */
 const salesReps = [
@@ -698,7 +736,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={(e) => {
+                     onClick={(e: React.FormEvent) => {
                         e.stopPropagation();
                         setFormData((prev: any) => ({ ...prev, section }));
                         setShowAddForm(true);

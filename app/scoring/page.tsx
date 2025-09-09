@@ -1,483 +1,556 @@
-"use client";
+'use client'
 
-import React, { useState } from "react";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import AuthWrapper from '@/components/AuthWrapper';
-import Link from "next/link";
-import { Home, FileText } from "lucide-react";
+import React, { useState, useEffect } from 'react'
+import { createClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { ChevronDown, ChevronUp, Save, AlertCircle, CheckCircle, Star, Clock, User, MapPin, FileText, Building } from 'lucide-react'
+import AuthWrapper from '@/components/AuthWrapper'
+import { supabase } from '@/lib/supabaseClient'
 
-// --- Types ---
-type ScoreItem = {
-  section: string;
-  question: string;
-  rating: 1 | 2 | 3 | "NA";
-  comment: string;
-};
+// --- Form Data Types ---
+interface Submission {
+  salesRep: string
+  qcAgent: string
+  propertyAddress: string
+  leadType: string
+  callTime: string
+  finalComment: string
+  overallAverage: number
+  submissionDate: string
+  scores: Record<string, Record<string, { rating: string; comment: string }>>
+}
 
-type Submission = {
-  id: string;
-  salesRep: string;
-  submissionDate: string;
-  qcAgent: string;
-  propertyAddress: string;
-  leadType: string;
-  finalComment: string;
-  overallAverage: number;
-  scores: Record<string, ScoreItem>;
-};
-
-// --- Supabase Setup (Fixed) ---
-const supabaseUrl = "https://qcfgxqtlkqttqbrwygol.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjZmd4cXRsa3F0dHEtnd5Z29sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MzczNjcsImV4cCI6MjA3MjIxMzM2N30.rN-zOVDOtJdwoRSO0Yi5tr3tK3MGVPJhwvV9yBjUnF0";
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-// --- Data Arrays ---
+// --- Team Members ---
 const salesReps = [
-  "Desmaine", "Jonathan", "Kyle", "Jean", "JP", 
-  "Phumla", "Michelle B", "Tiyani", "Hadya", "Banele", "Susan"
-];
+  'Desmaine', 'Jonathan', 'Kyle', 'Jean', 'JP', 'Phumla', 'Michelle B', 'Tiyani', 'Hadya', 'Banele'
+]
 
-const qcAgents = ["Jennifer", "Popi"];
+const qcAgents = [
+  'Jennifer', 'Popi'
+]
 
-// --- Categories ---
-const categories = [
-  { 
-    name: "Intro", 
-    questions: [
-      "Introduces self clearly and professionally", 
-      "States company name and purpose of call", 
-      "Confirms time availability with prospect"
-    ] 
-  },
-  { 
-    name: "Bonding & Rapport", 
-    questions: [
-      "Used open-ended questions to get the client talking", 
-      "Finds personal connection and builds trust", 
-      "Shows genuine interest and sincerity"
-    ] 
-  },
-  { 
-    name: "Magic Problem", 
-    questions: [
-      "Listens without interrupting", 
-      "Identifies core reason for selling. Goes down the Pain Funnel", 
-      "Summarizes and confirms understanding"
-    ] 
-  },
-  { 
-    name: "First Ask", 
-    questions: [
-      "Asks for first desired price confidently", 
-      "Asks about timeframe", 
-      "Explains our process clearly"
-    ] 
-  },
-  { 
-    name: "Property & Condition Questions", 
-    questions: [
-      "Collects decision maker information", 
-      "Gathered occupancy/tenant details", 
-      "Covered condition of all major systems and possible repairs"
-    ] 
-  },
-  { 
-    name: "Second Ask", 
-    questions: [
-      "Reviews repair estimate with seller", 
-      "Frames 'walk away' amount effectively", 
-      "Prepares seller for follow up call"
-    ] 
-  },
-  { 
-    name: "Second Call - The Close", 
-    questions: [
-      "Presents CASH and RBP offers clearly", 
-      "Uses seller motivation to position offer", 
-      "Handles objections confidently"
-    ] 
-  },
-  { 
-    name: "Overall Performance", 
-    questions: [
-      "Maintains positive, professional tone", 
-      "Follows script while adapting naturally", 
-      "Achieves call objective - closes the deal"
-    ] 
+const leadTypes = [
+  'Active',
+  'Prospecting',
+  'Follow-up',
+  'Cold Lead',
+  'Warm Lead',
+  'Hot Lead'
+]
+
+// --- Call Time Options ---
+const callTimeOptions = [
+  '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
+  '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM', '2:30 PM',
+  '3:00 PM', '3:30 PM', '4:00 PM', '4:30 PM', '5:00 PM'
+]
+
+// --- YOUR ACTUAL Scoring Criteria ---
+const scoringSections = {
+  'Intro': [
+    'introduces self clearly and professionally',
+    'states company name and purpose of call',
+    'confirms time availability with prospect'
+  ],
+  'Bonding & Rapport': [
+    'Used open-ended questions to get the client talking',
+    'Finds personal connection and builds trust',
+    'Shows genuine interest and sincerity'
+  ],
+  'Magic Problem': [
+    'Listens without interrupting',
+    'Identifies core reason for selling. Goes down the Pain Funnel',
+    'Summarizes and confirms understanding'
+  ],
+  'First Ask': [
+    'Asks for first desired price confidently',
+    'Asks about timeframe',
+    'Explains our process clearly'
+  ],
+  'Property & Condition Questions': [
+    'Collects decision maker information',
+    'Gathered occupancy/tenant details',
+    'Covered condition of all major systems and possible repairs'
+  ],
+  'Second Ask': [
+    'Reviews repair estimate with seller',
+    'Frames "walk away" amount effectively',
+    'Prepares seller for follow up call'
+  ],
+  'Second Call - The Close': [
+    'Presents CASH and RBP offers clearly',
+    'Uses seller motivation to position offer',
+    'Handles objections confidently'
+  ],
+  'Overall Performance': [
+    'Maintains positive, professional tone',
+    'Follows script while adapting naturally',
+    'Achieves call objective- closes the deal'
+  ]
+}
+
+const ScoringPage = () => {
+  // --- State Management ---
+  const [formData, setFormData] = useState({
+    salesRep: '',
+    qcAgent: '',
+    propertyAddress: '',
+    leadType: '',
+    callTime: '',
+    finalComment: ''
+  })
+
+  const [scores, setScores] = useState<Record<string, Record<string, { rating: string; comment: string }>>>({})
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [showError, setShowError] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+
+  // --- Initialize scores structure ---
+  useEffect(() => {
+    const initialScores: Record<string, Record<string, { rating: string; comment: string }>> = {}
+    Object.entries(scoringSections).forEach(([section, questions]) => {
+      initialScores[section] = {}
+      questions.forEach(question => {
+        initialScores[section][question] = { rating: '', comment: '' }
+      })
+    })
+    setScores(initialScores)
+
+    // Expand all sections by default for better UX
+    const expandedState: Record<string, boolean> = {}
+    Object.keys(scoringSections).forEach(section => {
+      expandedState[section] = true
+    })
+    setExpandedSections(expandedState)
+  }, [])
+
+  // --- Helper Functions ---
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
   }
-];
 
-// --- DB Save Helper (Fixed) ---
-const saveSubmissionToDatabase = async (submission: Submission) => {
-  try {
-    // Insert into submissions table
-    const { data: submissionData, error: submissionError } = await supabase
-      .from("submissions")
-      .insert([
-        {
-          sales_rep: submission.salesRep,
-          submission_date: submission.submissionDate,
-          qc_agent: submission.qcAgent,
-          property_address: submission.propertyAddress,
-          lead_type: submission.leadType,
-          final_comment: submission.finalComment,
-          overall_average: submission.overallAverage,
-        },
-      ])
-      .select()
-      .single();
-
-    if (submissionError) {
-      console.error("Submission error:", submissionError);
-      throw submissionError;
-    }
-
-    const submissionId = submissionData.id;
-
-    // Insert scores
-    const scoresPayload = (Object.values(submission.scores) as ScoreItem[])
-      .filter((s) => s.rating !== "NA")
-      .map((s) => ({
-        submission_id: submissionId,
-        section: s.section,
-        question: s.question,
-        rating: s.rating.toString(),
-        comment: s.comment,
-      }));
-
-    if (scoresPayload.length > 0) {
-      const { error: scoresError } = await supabase
-        .from("submission_scores")
-        .insert(scoresPayload);
-      
-      if (scoresError) {
-        console.error("Scores error:", scoresError);
-        throw scoresError;
+  const handleScoreChange = (section: string, question: string, field: 'rating' | 'comment', value: string) => {
+    setScores(prev => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [question]: {
+          ...prev[section][question],
+          [field]: value
+        }
       }
+    }))
+  }
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }))
+  }
+
+  const calculateOverallAverage = () => {
+    let totalScore = 0
+    let totalQuestions = 0
+
+    Object.entries(scores).forEach(([section, questions]) => {
+      Object.entries(questions).forEach(([question, data]) => {
+        if (data.rating && data.rating !== 'NA') {
+          totalScore += parseInt(data.rating)
+          totalQuestions++
+        }
+      })
+    })
+
+    return totalQuestions > 0 ? (totalScore / totalQuestions) : 0
+  }
+
+  const validateForm = () => {
+    if (!formData.salesRep || !formData.qcAgent || !formData.propertyAddress || !formData.leadType || !formData.callTime) {
+      setErrorMessage('Please fill in all required fields.')
+      return false
     }
 
-    return submissionId;
-  } catch (err) {
-    console.error("Save failed:", err);
-    throw err;
+    let hasValidRatings = false
+    Object.entries(scores).forEach(([section, questions]) => {
+      Object.entries(questions).forEach(([question, data]) => {
+        if (data.rating && data.rating !== '') {
+          hasValidRatings = true
+        }
+      })
+    })
+
+    if (!hasValidRatings) {
+      setErrorMessage('Please provide at least one rating.')
+      return false
+    }
+
+    return true
   }
-};
 
-// --- Main Component ---
-export default function ScoringPage() {
-  const [scores, setScores] = useState(() =>
-    Object.fromEntries(
-      categories.flatMap((c) =>
-        c.questions.map((q) => [q, { section: c.name, question: q, rating: "NA", comment: "" }])
-      )
-    )
-  );
+  // --- Database Operations ---
+  const saveSubmissionToDatabase = async (submission: Submission) => {
+    try {
+      // Insert into submissions table
+      const { data: submissionData, error: submissionError } = await supabase
+        .from("submissions")
+        .insert([
+          {
+            sales_rep: submission.salesRep,
+            submission_date: submission.submissionDate,
+            qc_agent: submission.qcAgent,
+            property_address: submission.propertyAddress,
+            lead_type: submission.leadType,
+            call_time: submission.callTime,
+            final_comment: submission.finalComment,
+            overall_average: submission.overallAverage,
+          },
+        ])
+        .select()
+        .single();
 
-  const [selectedRep, setSelectedRep] = useState("");
-  const [selectedQC, setSelectedQC] = useState("");
-  const [propertyAddress, setPropertyAddress] = useState("");
-  const [leadType, setLeadType] = useState("");
-  const [finalComment, setFinalComment] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [showError, setShowError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+      if (submissionError) {
+        console.error("Submission error:", submissionError);
+        throw submissionError;
+      }
 
-  const handleScoreChange = (question: string, field: keyof ScoreItem, value: any) => {
-    setScores((prev) => ({ ...prev, [question]: { ...prev[question], [field]: value } }));
+      const submissionId = submissionData.id;
+
+      // Insert individual scores
+      const scoreInserts: Array<{
+        submission_id: string;
+        section: string;
+        question: string;
+        rating: string;
+        comment: string | null;
+      }> = [];
+      Object.entries(submission.scores).forEach(([section, questions]) => {
+        Object.entries(questions).forEach(([question, data]) => {
+          if (data.rating && data.rating !== '') {
+            scoreInserts.push({
+              submission_id: submissionId,
+              section: section,
+              question: question,
+              rating: data.rating,
+              comment: data.comment || null,
+            });
+          }
+        });
+      });
+
+      if (scoreInserts.length > 0) {
+        const { error: scoresError } = await supabase
+          .from("submission_scores")
+          .insert(scoreInserts);
+
+        if (scoresError) {
+          console.error("Scores error:", scoresError);
+          throw scoresError;
+        }
+      }
+
+      console.log("Submission saved successfully!");
+    } catch (error) {
+      console.error("Save error:", error);
+      throw error;
+    }
   };
 
-  const handleSubmit = async () => {
-    setShowSuccess(false);
-    setShowError(false);
+  // --- Form Submission ---
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
     
-    if (!selectedRep || !selectedQC || !propertyAddress || !leadType) {
-      setErrorMessage("Please fill in all required fields: Sales Rep, QC Agent, Property Address, and Lead Type.");
-      setShowError(true);
-      setTimeout(() => setShowError(false), 5000);
-      return;
+    if (!validateForm()) {
+      setShowError(true)
+      setTimeout(() => setShowError(false), 5000)
+      return
     }
-    
-    setIsSubmitting(true);
+
+    setIsSubmitting(true)
 
     try {
-      const validScores = Object.values(scores).filter(s => s.rating !== "NA");
-      const overallAverage = validScores.length > 0 
-        ? validScores.reduce((acc, s) => acc + Number(s.rating), 0) / validScores.length 
-        : 0;
-
       const submission: Submission = {
-        id: Math.random().toString(36).substring(2),
-        salesRep: selectedRep,
-        submissionDate: new Date().toISOString().split("T")[0],
-        qcAgent: selectedQC,
-        propertyAddress,
-        leadType,
-        finalComment,
-        overallAverage: Math.round(overallAverage * 100) / 100,
-        scores: scores as Record<string, ScoreItem>,
-      };
+        ...formData,
+        overallAverage: calculateOverallAverage(),
+        submissionDate: new Date().toISOString(),
+        scores
+      }
 
-      await saveSubmissionToDatabase(submission);
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 5000);
+      await saveSubmissionToDatabase(submission)
 
-      // Reset form
-      setScores(
-        Object.fromEntries(
-          categories.flatMap((c) =>
-            c.questions.map((q) => [q, { section: c.name, question: q, rating: "NA", comment: "" }])
-          )
-        )
-      );
-      setFinalComment("");
-      setSelectedRep("");
-      setSelectedQC("");
-      setPropertyAddress("");
-      setLeadType("");
-    } catch (err) {
-      console.error("Submission failed:", err);
-      setErrorMessage("Failed to save submission. Please try again or contact support.");
-      setShowError(true);
-      setTimeout(() => setShowError(false), 8000);
+      // Success - reset form
+      setFormData({
+        salesRep: '',
+        qcAgent: '',
+        propertyAddress: '',
+        leadType: '',
+        callTime: '',
+        finalComment: ''
+      })
+
+      const initialScores: Record<string, Record<string, { rating: string; comment: string }>> = {}
+      Object.entries(scoringSections).forEach(([section, questions]) => {
+        initialScores[section] = {}
+        questions.forEach(question => {
+          initialScores[section][question] = { rating: '', comment: '' }
+        })
+      })
+      setScores(initialScores)
+
+      setShowSuccess(true)
+      setTimeout(() => setShowSuccess(false), 5000)
+
+    } catch (error) {
+      console.error('Submission failed:', error)
+      setErrorMessage('Failed to save submission. Please try again or contact support.')
+      setShowError(true)
+      setTimeout(() => setShowError(false), 5000)
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
-
-  const calculateCurrentScore = () => {
-    const validScores = Object.values(scores).filter(s => s.rating !== "NA");
-    if (validScores.length === 0) return { average: 0, percentage: 0, count: 0 };
-    
-    const average = validScores.reduce((acc, s) => acc + Number(s.rating), 0) / validScores.length;
-    const percentage = (average / 3) * 100;
-    return { average: Math.round(average * 100) / 100, percentage: Math.round(percentage), count: validScores.length };
-  };
-
-  const currentScore = calculateCurrentScore();
+  }
 
   return (
     <AuthWrapper>
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
-      {/* Header */}
-      <div className="bg-white/95 backdrop-blur-sm shadow-lg border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-[#1F3C88] to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                <FileText className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-slate-800">Quality Control Scoring</h1>
-                <p className="text-slate-600">Evaluate sales representative performance</p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <Link href="/">
-                <Button variant="outline" className="flex items-center gap-2">
-                  <Home className="w-4 h-4" />
-                  Dashboard
-                </Button>
-              </Link>
-              <Link href="/reporting">
-                <Button variant="outline" className="flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  Reports
-                </Button>
-              </Link>
-            </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
+        <div className="container mx-auto px-4 py-8">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              Call Scoring System
+            </h1>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Evaluate sales call performance across key metrics to drive continuous improvement
+            </p>
           </div>
-        </div>
-      </div>
 
-      <div className="max-w-6xl mx-auto p-6 space-y-8">
-        
-        {/* Success/Error Messages - Fixed Position */}
-        {showSuccess && (
-          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-emerald-100 border border-emerald-400 text-emerald-700 px-6 py-4 rounded-xl flex items-center gap-3 shadow-2xl max-w-md">
-            <span className="text-emerald-500 text-xl">✅</span>
-            <div>
-              <span className="font-bold">Scoring Submitted Successfully!</span>
-              <p className="text-sm">The evaluation has been saved to the database.</p>
+          {/* Success Message */}
+          {showSuccess && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+              <CheckCircle className="text-green-600 w-5 h-5" />
+              <span className="text-green-800 font-medium">Submission saved successfully!</span>
             </div>
-          </div>
-        )}
+          )}
 
-        {showError && (
-          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-xl flex items-center gap-3 shadow-2xl max-w-md">
-            <span className="text-red-500 text-xl">❌</span>
-            <div>
-              <span className="font-bold">Error:</span>
-              <p className="text-sm">{errorMessage}</p>
+          {/* Error Message */}
+          {showError && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+              <AlertCircle className="text-red-600 w-5 h-5" />
+              <span className="text-red-800 font-medium">{errorMessage}</span>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Scoring Setup */}
-        <Card className="shadow-xl border-slate-200">
-          <CardContent className="p-8">
-            <h2 className="text-2xl font-bold text-slate-800 mb-6">Scoring Setup</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Basic Information */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                <User className="w-5 h-5 text-blue-600" />
+                Call Information
+              </h2>
               
-              {/* QC Agent Selection */}
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">QC Agent *</label>
-                <select
-                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-[#1F3C88] focus:ring-2 focus:ring-[#1F3C88]/20 transition-all"
-                  value={selectedQC}
-                  onChange={(e) => setSelectedQC(e.target.value)}
-                >
-                  <option value="">Select QC Agent</option>
-                  {qcAgents.map(agent => (
-                    <option key={agent} value={agent}>{agent}</option>
-                  ))}
-                </select>
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Sales Rep */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Sales Representative *
+                  </label>
+                  <select
+                    value={formData.salesRep}
+                    onChange={(e) => handleInputChange('salesRep', e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Select Sales Rep</option>
+                    {salesReps.map(rep => (
+                      <option key={rep} value={rep}>{rep}</option>
+                    ))}
+                  </select>
+                </div>
 
-              {/* Sales Rep Selection */}
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Sales Representative *</label>
-                <select
-                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-[#1F3C88] focus:ring-2 focus:ring-[#1F3C88]/20 transition-all"
-                  value={selectedRep}
-                  onChange={(e) => setSelectedRep(e.target.value)}
-                >
-                  <option value="">Select Sales Rep</option>
-                  {salesReps.map(rep => (
-                    <option key={rep} value={rep}>{rep}</option>
-                  ))}
-                </select>
-              </div>
+                {/* QC Agent */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    QC Agent *
+                  </label>
+                  <select
+                    value={formData.qcAgent}
+                    onChange={(e) => handleInputChange('qcAgent', e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Select QC Agent</option>
+                    {qcAgents.map(agent => (
+                      <option key={agent} value={agent}>{agent}</option>
+                    ))}
+                  </select>
+                </div>
 
-              {/* Lead Type */}
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Lead Status *</label>
-                <select
-                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-[#1F3C88] focus:ring-2 focus:ring-[#1F3C88]/20 transition-all"
-                  value={leadType}
-                  onChange={(e) => setLeadType(e.target.value)}
-                >
-                  <option value="">Select Lead Status</option>
-                  <option value="Active">🟢 Active Lead</option>
-                  <option value="Dead">🔴 Dead Lead</option>
-                </select>
-              </div>
+                {/* Call Time */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Clock className="w-4 h-4 inline mr-1" />
+                    Call Time *
+                  </label>
+                  <select
+                    value={formData.callTime}
+                    onChange={(e) => handleInputChange('callTime', e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Select Call Time</option>
+                    {callTimeOptions.map(time => (
+                      <option key={time} value={time}>{time}</option>
+                    ))}
+                  </select>
+                </div>
 
-              {/* Property Address */}
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Property Address *</label>
-                <input
-                  type="text"
-                  placeholder="123 Main St, City, State ZIP"
-                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-[#1F3C88] focus:ring-2 focus:ring-[#1F3C88]/20 transition-all"
-                  value={propertyAddress}
-                  onChange={(e) => setPropertyAddress(e.target.value)}
-                />
+                {/* Property Address */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <MapPin className="w-4 h-4 inline mr-1" />
+                    Property Address *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.propertyAddress}
+                    onChange={(e) => handleInputChange('propertyAddress', e.target.value)}
+                    placeholder="Enter property address"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                {/* Lead Type */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Building className="w-4 h-4 inline mr-1" />
+                    Lead Type *
+                  </label>
+                  <select
+                    value={formData.leadType}
+                    onChange={(e) => handleInputChange('leadType', e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Select Lead Type</option>
+                    {leadTypes.map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
-            {/* Current Score Display */}
-            {currentScore.count > 0 && (
-              <div className="mt-6 p-4 bg-gradient-to-r from-[#1F3C88]/10 to-blue-500/10 rounded-xl border border-[#1F3C88]/20">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-700">Current Score Progress:</span>
-                  <div className="flex gap-6 text-sm">
-                    <span className="font-bold text-[#1F3C88]">Average: {currentScore.average}/3.0</span>
-                    <span className="font-bold text-emerald-600">Percentage: {currentScore.percentage}%</span>
-                    <span className="text-slate-600">Questions Scored: {currentScore.count}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            {/* Scoring Sections */}
+            {Object.entries(scoringSections).map(([section, questions]) => (
+              <div key={section} className="bg-white rounded-xl shadow-sm border border-gray-200">
+                {/* Section Header */}
+                <button
+                  type="button"
+                  onClick={() => toggleSection(section)}
+                  className="w-full p-6 text-left flex items-center justify-between hover:bg-gray-50 transition-colors rounded-t-xl"
+                >
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <Star className="w-5 h-5 text-blue-600" />
+                    {section}
+                  </h3>
+                  {expandedSections[section] ? (
+                    <ChevronUp className="w-5 h-5 text-gray-500" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-gray-500" />
+                  )}
+                </button>
 
-        {/* Scoring Categories */}
-        {categories.map((category, index) => (
-          <Card key={category.name} className="shadow-xl border-slate-200">
-            <CardContent className="p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-8 h-8 bg-gradient-to-r from-[#1F3C88] to-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
-                  {index + 1}
-                </div>
-                <h2 className="text-2xl font-bold text-slate-800">{category.name}</h2>
-              </div>
+                {/* Section Content */}
+                {expandedSections[section] && (
+                  <div className="p-6 pt-0 space-y-6">
+                    {questions.map((question, index) => (
+                      <div key={index} className="border-l-4 border-blue-100 pl-4">
+                        <div className="mb-3">
+                          <h4 className="font-medium text-gray-900 mb-2">{question}</h4>
+                          
+                          {/* Rating Buttons */}
+                          <div className="flex gap-2 mb-3">
+                            {['1', '2', '3', 'NA'].map(rating => (
+                              <button
+                                key={rating}
+                                type="button"
+                                onClick={() => handleScoreChange(section, question, 'rating', rating)}
+                                className={`px-4 py-2 rounded-lg border font-medium transition-all ${
+                                  scores[section]?.[question]?.rating === rating
+                                    ? rating === 'NA'
+                                      ? 'bg-gray-500 text-white border-gray-500'
+                                      : rating === '1'
+                                      ? 'bg-red-500 text-white border-red-500'
+                                      : rating === '2'
+                                      ? 'bg-yellow-500 text-white border-yellow-500'
+                                      : 'bg-green-500 text-white border-green-500'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                                }`}
+                              >
+                                {rating === 'NA' ? 'N/A' : rating}
+                              </button>
+                            ))}
+                          </div>
 
-              <div className="space-y-8">
-                {category.questions.map((question) => {
-                  const score = scores[question];
-                  return (
-                    <div key={question} className="border-b border-slate-100 pb-6 last:border-b-0">
-                      <h3 className="font-semibold text-slate-700 mb-4">{question}</h3>
-                      
-                      {/* Rating Options */}
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-                        {[
-                          { value: 1, label: "1 - Poor/Not Done", color: "bg-red-100 text-red-700 border-red-300" },
-                          { value: 2, label: "2 - Met Expectations", color: "bg-yellow-100 text-yellow-700 border-yellow-300" },
-                          { value: 3, label: "3 - Exceeded Expectations", color: "bg-emerald-100 text-emerald-700 border-emerald-300" },
-                          { value: "NA", label: "N/A - Not Applicable", color: "bg-slate-100 text-slate-700 border-slate-300" }
-                        ].map((option) => (
-                          <label key={option.value} className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all hover:shadow-md ${score.rating === option.value ? option.color + ' ring-2 ring-offset-2 ring-current' : 'bg-white border-slate-300'}`}>
-                            <input
-                              type="radio"
-                              name={question}
-                              checked={score.rating === option.value}
-                              onChange={() => handleScoreChange(question, "rating", option.value)}
-                              className="sr-only"
-                            />
-                            <div className={`w-4 h-4 rounded-full border-2 ${score.rating === option.value ? 'bg-current border-current' : 'border-slate-400'}`}></div>
-                            <span className="font-medium text-sm">{option.label}</span>
-                          </label>
-                        ))}
+                          {/* Comment Field */}
+                          <textarea
+                            value={scores[section]?.[question]?.comment || ''}
+                            onChange={(e) => handleScoreChange(section, question, 'comment', e.target.value)}
+                            placeholder="Optional comments..."
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            rows={2}
+                          />
+                        </div>
                       </div>
-
-                      {/* Comment Box */}
-                      <textarea
-                        className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-[#1F3C88] focus:ring-2 focus:ring-[#1F3C88]/20 transition-all resize-none"
-                        placeholder="Add specific comments about this criteria..."
-                        rows={3}
-                        value={score.comment}
-                        onChange={(e) => handleScoreChange(question, "comment", e.target.value)}
-                      />
-                    </div>
-                  );
-                })}
+                    ))}
+                  </div>
+                )}
               </div>
-            </CardContent>
-          </Card>
-        ))}
+            ))}
 
-        {/* Final Comments */}
-        <Card className="shadow-xl border-slate-200">
-          <CardContent className="p-8">
-            <h2 className="text-2xl font-bold text-slate-800 mb-4">Final Comments & Overall Assessment</h2>
-            <textarea
-              className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-[#1F3C88] focus:ring-2 focus:ring-[#1F3C88]/20 transition-all resize-none"
-              placeholder="Provide overall feedback, areas for improvement, strengths observed, etc..."
-              rows={5}
-              value={finalComment}
-              onChange={(e) => setFinalComment(e.target.value)}
-            />
-          </CardContent>
-        </Card>
+            {/* Final Comments */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-600" />
+                Final Comments
+              </h3>
+              <textarea
+                value={formData.finalComment}
+                onChange={(e) => handleInputChange('finalComment', e.target.value)}
+                placeholder="Overall feedback and recommendations..."
+                className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                rows={4}
+              />
+            </div>
 
-        {/* Submit Section */}
-        <div className="flex justify-end">
-          <Button 
-            onClick={handleSubmit} 
-            disabled={isSubmitting || !selectedRep || !selectedQC || !propertyAddress || !leadType}
-            className="px-12 py-4 text-lg font-bold bg-gradient-to-r from-[#1F3C88] to-blue-600 hover:shadow-xl transition-all duration-300"
-          >
-            {isSubmitting ? "Submitting Evaluation..." : "Submit Scoring Evaluation"}
-          </Button>
+            {/* Submit Button */}
+            <div className="flex justify-center">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-8 py-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 min-w-[200px] justify-center"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-5 h-5" />
+                    Submit Scoring
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
-    </div>
-  </AuthWrapper>
-);
+    </AuthWrapper>
+  )
 }
+
+export default ScoringPage
